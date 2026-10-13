@@ -266,7 +266,7 @@ class GlossaryDialog:
         from PySide6.QtWidgets import QDialog, QScrollArea
         self.dlg = QDialog(parent)
         self.dlg.setWindowTitle("Glossary")
-        self.dlg.resize(620, 420)
+        self.dlg.resize(640, 720)
         self.dlg.setStyleSheet(f"QDialog {{ background: {theme.CARD}; }}")
         outer = QVBoxLayout(self.dlg); outer.setContentsMargins(0, 0, 0, 0)
         self.scroll = QScrollArea(); self.scroll.setWidgetResizable(True)
@@ -286,6 +286,9 @@ class GlossaryDialog:
         for kind, content in blocks:
             if kind == "p":
                 lay.addWidget(label(content, "body"))
+            elif kind == "demo":
+                from .demos import DEMOS
+                lay.addWidget(DEMOS[content]())
             else:
                 pm = QPixmap(); pm.loadFromData(formula_png(content)); pm.setDevicePixelRatio(220 / 96)
                 img = QLabel(); img.setPixmap(pm); img.setAlignment(Qt.AlignHCenter)

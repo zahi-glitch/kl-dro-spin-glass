@@ -37,6 +37,10 @@ ENTRIES: dict[str, tuple[str, list]] = {
         ("p", "A function that scores each configuration: low energy means preferred. Physics calls it the "
               "Hamiltonian; machine learning would call it a (negative) score or a loss."),
         ("eq", r"$H_N:\{-1,+1\}^N\to\mathbb{R},\qquad \sigma\mapsto H_N(\sigma)$"),
+        ("p", "Energy alone does not fix the probabilities: the inverse temperature β = 1/T says how much it counts. "
+              "The Gibbs distribution turns energies into probabilities, lower energy meaning more likely."),
+        ("eq", r"$\mu_\beta(\sigma)=\frac{e^{-\beta H(\sigma)}}{Z},\qquad \log Z=-\beta\,\mathbb{E}_{\mu_\beta}[H]+\mathrm{Ent}(\mu_\beta)$"),
+        ("demo", "energy"),
     ]),
     "temperature": ("Temperature and β", [
         ("p", "The temperature T decides how strictly the system follows the energy; β = 1/T is the inverse "
@@ -62,6 +66,10 @@ ENTRIES: dict[str, tuple[str, list]] = {
               "on n states and zero for a distribution concentrated on one state. With μ uniform, "
               "Ent(ν) = log n − H(ν | μ): entropy is relative entropy seen from the uniform distribution."),
         ("eq", r"$\mathrm{Ent}(\nu)=-\sum_{\sigma} \nu(\sigma)\log \nu(\sigma)$"),
+        ("p", "Why: with μ = 1/n, log(ν/μ) = log ν + log n, so H(ν | μ) = Σ ν log ν + log n = log n − Ent(ν). "
+              "Entropy and distance from uniform share a fixed total, log n."),
+        ("eq", r"$\mathrm{Ent}(\nu)+H(\nu\,|\,\mu)=\log n\qquad(\mu\ \mathrm{uniform\ on\ }n\ \mathrm{states})$"),
+        ("demo", "entropy"),
     ]),
     "kl": ("Relative entropy (Kullback–Leibler divergence)", [
         ("p", "How far a distribution ν is from a reference μ. It is never negative and is zero only when ν = μ. "
