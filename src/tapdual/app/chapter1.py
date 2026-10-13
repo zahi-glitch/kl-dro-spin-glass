@@ -1,4 +1,4 @@
-"""Chapter 1: spins, energy, temperature. Three live models: Hopfield, SK, REM."""
+"""Live model pages: Hopfield memory, REM freezing (and an SK page kept for reference, not shown)."""
 from __future__ import annotations
 
 import numpy as np
@@ -51,7 +51,7 @@ class HopfieldPage(QWidget):
             t.clicked.connect(lambda k=mu: self.choose(k))
             tl.addWidget(t); self.thumbs.append(t)
         tl.addStretch(1)
-        memories = Card("Stored memories", "Written into the couplings by Hebb's rule. Click one to corrupt it.")
+        memories = Card("Stored memories", "Written into the couplings by [[hebb|Hebb's rule]]. Click one to corrupt it.")
         memories.add(thumbs)
 
         self.noise = LabeledSlider("Corruption", 0.0, 0.5, 0.3, 100, fmt=lambda v: f"{v:.0%} of pixels flipped")
@@ -66,7 +66,7 @@ class HopfieldPage(QWidget):
 
         self.bars = OverlapBars(sg.PATTERN_NAMES)
         overlaps = Card("Overlap with each memory", "m = +1: perfect recall. m ≈ 0: unrelated. "
-                        "These overlaps are the <i>order parameters</i> of the network.")
+                        "These [[overlap|overlaps]] are the [[order-parameter|order parameters]] of the network.")
         overlaps.add(self.bars)
         overlaps.add(Deeper(
             "Energy E(s) = −½ Σ<sub>ij</sub> J<sub>ij</sub> s<sub>i</sub> s<sub>j</sub>, with Hebbian couplings "
@@ -75,7 +75,7 @@ class HopfieldPage(QWidget):
             "+ const: each memory is a valley. The dynamics is Glauber's: s<sub>i</sub> = +1 with probability "
             "1/(1 + e<sup>−2h<sub>i</sub>/T</sup>), h<sub>i</sub> = Σ<sub>j</sub> J<sub>ij</sub> s<sub>j</sub>. "
             "Here N = 256 and 3 memories; recall survives up to about 0.138·N random memories "
-            "(Amit, Gutfreund, Sompolinsky). Chapter 3: this network is a restricted Boltzmann machine in disguise."))
+            "(Amit, Gutfreund, Sompolinsky). Next tab: this network is a restricted Boltzmann machine in disguise."))
 
         practice = Practice(
             "Search by content, not by address",
@@ -307,7 +307,7 @@ class REMPage(QWidget):
         explain = Card("Why this matters later")
         explain.add(label("There are only 2<sup>N</sup> configurations, so the entropy can never exceed log 2 per spin. "
                           "That is a <b>budget</b>. Above β<sub>c</sub> the Gibbs measure has spent it all and "
-                          "<b>freezes</b> onto a few states. In chapter 4 the same budget reappears as a "
+                          "<b>freezes</b> onto a few states. In the robust-optimisation section the same budget reappears as a "
                           "KL-divergence constraint, and the freezing as the moment the constraint binds.", "body"))
         explain.add(Deeper(
             "Derrida's REM: energies E<sub>α</sub> ~ N(0, N) independent for α = 1…2<sup>N</sup>. "

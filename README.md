@@ -20,13 +20,19 @@ A local Mac/Linux/Windows app that tells the story from spin glasses to robust
 optimisation, chapter by chapter, with live simulations:
 
 ```bash
-pip install -e ".[app]"        # adds PySide6 and pyqtgraph
+pip install -e ".[app]"        # adds PySide6, pyqtgraph and matplotlib
 python -m tapdual.app
 ```
 
-Ready: chapter 1 (Hopfield memory recall, two SK replicas, REM freezing) and
-chapter 2 (free energy as an optimisation: energy against entropy, softmax, ELBO) and
-chapter 3 (a Hopfield network is a restricted Boltzmann machine, recalled live).
+Sections, from order to disorder:
+
+1. **Free energy is an optimisation**: energy against entropy, softmax, ELBO.
+2. **Curie–Weiss**: collective order, the free-energy landscape, hysteresis of adoption with peer effects.
+3. **Hopfield**: memory recall; the same network as a restricted Boltzmann machine; storage capacity and what is still open.
+4. **REM**: extreme disorder and freezing, the entropy budget.
+5. Robust optimisation (in progress).
+
+Blue words open a glossary entry with typeset formulas (rendered offline with matplotlib).
 
 ## Dashboard
 

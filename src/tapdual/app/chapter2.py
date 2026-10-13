@@ -1,4 +1,4 @@
-"""Chapter 2: free energy is an optimisation (the Gibbs variational principle)."""
+"""Section 1: free energy is an optimisation (the Gibbs variational principle)."""
 from __future__ import annotations
 
 import numpy as np
@@ -21,11 +21,12 @@ class Chapter2(QWidget):
         self.ts = np.linspace(0, 4, 161)
 
         lay = QVBoxLayout(self); lay.setContentsMargins(28, 24, 28, 24); lay.setSpacing(12)
-        lay.addWidget(label("CHAPTER 2", "eyebrow"))
+        lay.addWidget(label("SECTION 1", "eyebrow"))
         lay.addWidget(label(self.TITLE, "title"))
         lay.addWidget(label("Nature does not compute partition functions: it <b>optimises</b>. Among all ways of spreading "
-                            "probability over the states, the Gibbs distribution is the one that best balances low "
-                            "energy against high entropy, and the best value it reaches is the free energy log Z.", "lead"))
+                            "probability over the states, the [[gibbs|Gibbs distribution]] is the one that best balances "
+                            "low [[energy]] against high [[entropy]], and the best value it reaches is the "
+                            "[[free-energy|free energy]] log Z. Every model in the next sections is an instance of this.", "lead"))
 
         # left: the distributions and the objective
         self.plot_p = pg.PlotWidget(); theme.style_plot(self.plot_p.getPlotItem(), "states, from lowest to highest energy", "probability")
@@ -89,7 +90,7 @@ class Chapter2(QWidget):
             "Hence log Z = max<sub>q</sub> { −β E<sub>q</sub>[E] + H(q) }, attained only at q = p<sub>β</sub>. "
             "Writing H(q) = log n − KL(q ‖ uniform) turns it into log Z = log n + max<sub>q</sub> { −β E<sub>q</sub>[E] − KL(q ‖ μ) } "
             "with μ uniform: a <b>KL-penalised worst case</b> over distributions. That is the form the rest of the story uses, "
-            "with the penalty becoming a budget in chapter 4."))
+            "with the penalty becoming a budget in the robust-optimisation section."))
 
         self.reco = label("", "body")
         practice = Practice(

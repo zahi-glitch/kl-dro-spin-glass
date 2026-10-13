@@ -6,18 +6,16 @@ from PySide6.QtWidgets import (QHBoxLayout, QLabel, QListWidget, QListWidgetItem
                                QScrollArea, QStackedWidget, QVBoxLayout, QWidget)
 
 from . import theme
-from .chapter1 import Chapter1
 from .chapter2 import Chapter2
-from .chapter3 import Chapter3
-from .widgets import label
+from .sections import CurieWeissSection, HopfieldSection, REMSection
+from .widgets import GlossaryDialog, label, set_glossary_opener
 
 CHAPTERS = [
-    ("1", "Spins, energy, temperature", Chapter1),
-    ("2", "Free energy is an optimisation", Chapter2),
-    ("3", "Hopfield = Boltzmann machine", Chapter3),
-    ("4", "Counting gives a budget", None),
-    ("5", "Robust optimisation: ML and finance", None),
-    ("6", "What the non-linearity adds", None),
+    ("1", "Free energy is an optimisation", Chapter2),
+    ("2", "Curie–Weiss: everyone agrees", CurieWeissSection),
+    ("3", "Hopfield: memories", HopfieldSection),
+    ("4", "REM: extreme disorder", REMSection),
+    ("5", "Robust optimisation", None),
 ]
 
 
@@ -48,6 +46,7 @@ class MainWindow(QMainWindow):
                 item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
             self.nav.addItem(item)
         sl.addWidget(self.nav, 1)
+        sl.addWidget(label("Blue words open a short explanation with the formulas.", "small"))
         sl.addWidget(label("Based on Kistler, Schmidt, Sebastiani (2023) and Sebastiani, Schmidt (2024).", "small"))
 
         self.stack = QStackedWidget()
@@ -60,4 +59,6 @@ class MainWindow(QMainWindow):
         cl.addWidget(side); cl.addWidget(self.stack, 1)
         self.setCentralWidget(central)
         self.nav.currentRowChanged.connect(self.stack.setCurrentIndex)
+        self.glossary = GlossaryDialog(self)
+        set_glossary_opener(self.glossary.open)
         self.nav.setCurrentRow(0)

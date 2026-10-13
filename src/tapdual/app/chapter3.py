@@ -1,4 +1,4 @@
-"""Chapter 3: a Hopfield network is a restricted Boltzmann machine in disguise."""
+"""Hopfield section, second tab: a Hopfield network is a restricted Boltzmann machine in disguise."""
 from __future__ import annotations
 
 import numpy as np
@@ -77,24 +77,21 @@ class NetworkDiagram(QWidget):
         p.end()
 
 
-class Chapter3(QWidget):
-    TITLE = "A Hopfield network is a Boltzmann machine"
+class RBMPage(QWidget):
     FPS = 5
 
     def __init__(self):
         super().__init__()
-        self.setObjectName("page")
         self.rbm, self.rng = sg.RBM(beta=3.0), np.random.default_rng()
         self.target, self.steps = 0, 0
         self.s = sg.PATTERNS[0].copy()
 
-        lay = QVBoxLayout(self); lay.setContentsMargins(28, 24, 28, 24); lay.setSpacing(12)
-        lay.addWidget(label("CHAPTER 3", "eyebrow"))
-        lay.addWidget(label(self.TITLE, "title"))
-        lay.addWidget(label("The memory network of chapter 1 can be redrawn as a two-layer machine: the pixels below, "
-                            "one hidden unit per memory above, and links only between the layers. Same probabilities, "
-                            "far fewer connections. This is the bridge from spin glasses to machine learning "
-                            "(Barra, Bernacchia, Santucci, Contucci).", "lead"))
+        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(12)
+        lay.addWidget(label("The memory network can be redrawn as a two-layer machine: the pixels below, one hidden unit "
+                            "per memory above, and links only between the layers. Same probabilities, far fewer "
+                            "connections: a [[hopfield|Hopfield network]] is a [[rbm|restricted Boltzmann machine]] "
+                            "(Barra, Bernacchia, Santucci, Contucci). The hidden units are the dual variables of a "
+                            "[[legendre|Legendre transform]].", "body"))
 
         diagram = Card("Two drawings of the same machine")
         diagram.add(NetworkDiagram())

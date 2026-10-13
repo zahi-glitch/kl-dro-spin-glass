@@ -80,3 +80,30 @@ def test_rbm_recalls_memories():
         for _ in range(15):
             s = rbm.sample_visible(rbm.sample_hidden(s, rng), rng)
         assert rbm.overlaps(s)[mu] > 0.95
+
+
+def test_curie_weiss_matches_exact_finite_N():
+    """(1/N) log Z_N from the exact binomial sum approaches log 2 + sup phi."""
+    from scipy.special import gammaln
+    from tapdual.spinglass import cw_free_energy
+    N = 4000
+    k = np.arange(N + 1)
+    m = (2 * k - N) / N
+    for beta, h in [(0.5, 0.0), (1.5, 0.0), (1.2, 0.1)]:
+        log_terms = gammaln(N + 1) - gammaln(k + 1) - gammaln(N - k + 1) + N * (0.5 * beta * m * m + beta * h * m)
+        exact = (log_terms.max() + np.log(np.exp(log_terms - log_terms.max()).sum())) / N
+        assert abs(exact - cw_free_energy(beta, h)) < 3e-3
+
+
+def test_curie_weiss_transition():
+    from tapdual.spinglass import cw_stationary
+    assert len(cw_stationary(0.8, 0.0)) == 1          # only m = 0
+    roots = cw_stationary(1.5, 0.0)
+    assert len(roots) == 3 and abs(roots[-1] - np.tanh(1.5 * roots[-1])) < 1e-12 and roots[-1] > 0.8
+
+
+def test_capacity_drop():
+    from tapdual.spinglass import recall_overlap
+    rng = np.random.default_rng(0)
+    assert recall_overlap(400, 20, rng) > 0.95         # alpha = 0.05: recall
+    assert recall_overlap(400, 120, rng) < 0.6         # alpha = 0.30: lost

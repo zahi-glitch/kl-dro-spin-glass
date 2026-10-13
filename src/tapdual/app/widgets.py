@@ -10,12 +10,37 @@ from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPushButton, QSizePo
 from . import theme
 
 
+_GLOSSARY_OPENER = None
+
+
+def set_glossary_opener(fn) -> None:
+    """Register the function that opens a glossary entry (called with its key)."""
+    global _GLOSSARY_OPENER
+    _GLOSSARY_OPENER = fn
+
+
+def _on_link(href: str) -> None:
+    if href.startswith("gloss:") and _GLOSSARY_OPENER is not None:
+        _GLOSSARY_OPENER(href[6:])
+
+
 def label(text: str, kind: str = "body", wrap: bool = True) -> QLabel:
-    lab = QLabel(text)
+    """Rich-text label. [[term|shown]] becomes a link to the glossary entry `term`."""
+    from .glossary import linkify
+    lab = QLabel(linkify(text, theme.ACCENT))
     lab.setObjectName(kind)
     lab.setWordWrap(wrap)
     lab.setTextFormat(Qt.RichText)
+    if "gloss:" in lab.text():
+        lab.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
+        lab.linkActivated.connect(_on_link)
+        lab.setCursor(Qt.ArrowCursor)
     return lab
+
+
+def set_label_text(lab: QLabel, text: str) -> None:
+    from .glossary import linkify
+    lab.setText(linkify(text, theme.ACCENT))
 
 
 class Card(QFrame):
@@ -218,3 +243,41 @@ class Segmented(QWidget):
 def hline() -> QFrame:
     f = QFrame(); f.setFrameShape(QFrame.HLine); f.setStyleSheet(f"color: {theme.BORDER};")
     return f
+
+
+class GlossaryDialog:
+    """A small window explaining one term, with typeset formulas."""
+
+    def __init__(self, parent=None):
+        from PySide6.QtWidgets import QDialog, QScrollArea
+        self.dlg = QDialog(parent)
+        self.dlg.setWindowTitle("Glossary")
+        self.dlg.resize(620, 420)
+        self.dlg.setStyleSheet(f"QDialog {{ background: {theme.CARD}; }}")
+        outer = QVBoxLayout(self.dlg); outer.setContentsMargins(0, 0, 0, 0)
+        self.scroll = QScrollArea(); self.scroll.setWidgetResizable(True)
+        self.scroll.setStyleSheet(f"QScrollArea {{ background: {theme.CARD}; border: none; }}")
+        outer.addWidget(self.scroll)
+        self.history = []
+
+    def open(self, key: str):
+        from PySide6.QtGui import QPixmap
+        from .glossary import ENTRIES, formula_png
+        if key not in ENTRIES:
+            return
+        title, blocks = ENTRIES[key]
+        body = QWidget(); body.setStyleSheet(f"background: {theme.CARD};")
+        lay = QVBoxLayout(body); lay.setContentsMargins(24, 20, 24, 20); lay.setSpacing(10)
+        lay.addWidget(label("GLOSSARY", "eyebrow")); lay.addWidget(label(title, "title"))
+        for kind, content in blocks:
+            if kind == "p":
+                lay.addWidget(label(content, "body"))
+            else:
+                pm = QPixmap(); pm.loadFromData(formula_png(content)); pm.setDevicePixelRatio(220 / 96)
+                img = QLabel(); img.setPixmap(pm); img.setAlignment(Qt.AlignHCenter)
+                img.setStyleSheet("padding: 6px 0;")
+                lay.addWidget(img)
+        lay.addStretch(1)
+        self.scroll.setWidget(body)
+        self.dlg.setWindowTitle(f"Glossary · {title}")
+        self.dlg.show(); self.dlg.raise_(); self.dlg.activateWindow()

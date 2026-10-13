@@ -191,3 +191,63 @@ class RBM:
         """log of the Hopfield Gibbs weight exp((beta N / 2) sum_mu m_mu^2), up to a constant."""
         m = self.overlaps(s)
         return 0.5 * self.beta * self.N * float(m @ m)
+
+
+# --------------------------------------------------------------------------- Curie-Weiss
+def cw_rate(m):
+    """Cramér rate of the mean of fair +-1 coins: I(m) = (1+m)/2 log(1+m) + (1-m)/2 log(1-m)."""
+    m = np.clip(np.asarray(m, dtype=float), -1 + 1e-12, 1 - 1e-12)
+    return 0.5 * (1 + m) * np.log1p(m) + 0.5 * (1 - m) * np.log1p(-m)
+
+
+def cw_landscape(m, beta: float, h: float):
+    """phi(m) = beta m^2 / 2 + beta h m - I(m); (1/N) log Z -> log 2 + sup_m phi(m)."""
+    m = np.asarray(m, dtype=float)
+    return 0.5 * beta * m * m + beta * h * m - cw_rate(m)
+
+
+def cw_stationary(beta: float, h: float) -> list:
+    """All solutions of m = tanh(beta (m + h)) (the stationary points of phi), sorted."""
+    grid = np.linspace(-0.999999, 0.999999, 4001)
+    g = grid - np.tanh(beta * (grid + h))
+    roots = []
+    for k in np.nonzero(np.sign(g[:-1]) != np.sign(g[1:]))[0]:
+        a, b = grid[k], grid[k + 1]
+        for _ in range(60):
+            c = 0.5 * (a + b)
+            if np.sign(c - np.tanh(beta * (c + h))) == np.sign(a - np.tanh(beta * (a + h))):
+                a = c
+            else:
+                b = c
+        roots.append(0.5 * (a + b))
+    return roots
+
+
+def cw_free_energy(beta: float, h: float) -> float:
+    """log 2 + sup_m phi(m)."""
+    return float(np.log(2) + max(cw_landscape(r, beta, h) for r in cw_stationary(beta, h)))
+
+
+def cw_sweep(s: np.ndarray, beta: float, h: float, rng, n_updates: int) -> None:
+    """Glauber dynamics for the Curie-Weiss model (all-to-all couplings 1/N), in place."""
+    n = s.size
+    total = s.sum()
+    for i in rng.integers(0, n, n_updates):
+        field = (total - s[i]) / n + h
+        new = 1.0 if rng.random() < 1.0 / (1.0 + np.exp(-2.0 * beta * field)) else -1.0
+        total += new - s[i]
+        s[i] = new
+
+
+# --------------------------------------------------------------------------- storage capacity
+def recall_overlap(N: int, P: int, rng, tests: int = 8, sweeps: int = 8) -> float:
+    """Mean final overlap when zero-temperature dynamics starts at a stored random pattern."""
+    xi = rng.choice([-1.0, 1.0], (P, N))
+    J = xi.T @ xi / N
+    np.fill_diagonal(J, 0.0)
+    out = []
+    for mu in rng.choice(P, min(tests, P), replace=False):
+        s = xi[mu].copy()
+        heat_bath(s, J, 0.0, rng, sweeps * N)
+        out.append(float(xi[mu] @ s / N))
+    return float(np.mean(out))
