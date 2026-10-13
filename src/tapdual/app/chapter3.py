@@ -139,14 +139,15 @@ class RBMPage(QWidget):
             "<i>Learning and retrieval operational modes for three-layer restricted Boltzmann machines</i> "
             "(Agliari, Sebastiani, J. Stat. Phys.)."))
 
-        practice = Practice(
-            "Fill in what a user has not rated yet",
-            "Restricted Boltzmann machines were one of the models used for movie recommendation in the Netflix Prize "
-            "(Salakhutdinov, Mnih, Hinton, 2007): visible units are a user's ratings, hidden units are learned "
-            "'taste' features. Press <b>Half unknown</b>: the bottom half of the pixels is unknown, like the films a "
-            "user has not seen, and the machine fills it in from the half it knows. Here the weights are the three "
-            "stored memories; in a recommender they are learned from data, but the inference step is the same.")
-
+        practice = Practice("How does a recommender guess the films you have not rated?", rows=[
+            ("The model", "A restricted Boltzmann machine (RBM): visible units = a user's ratings, hidden units = "
+                          "latent 'taste' features. 'Restricted' means no links inside a layer, only between layers."),
+            ("History", "RBMs were among the models used in the Netflix Prize (Salakhutdinov, Mnih, Hinton, 2007)."),
+            ("Try it", "Press <b>Half unknown</b>, then <b>Run</b>: the bottom half plays the films the user has not "
+                       "seen. The machine alternates 'hidden given visible' and 'visible given hidden' and fills them in."),
+            ("Difference", "Here the weights are the stored memories ξ (Hebb's rule). In a recommender they are "
+                           "learned from data, but the filling-in step is the same."),
+        ])
         lay.addWidget(_two_columns(_column(diagram, demo), _column(controls, why, practice)), 1)
 
         self.timer = QTimer(self); self.timer.setInterval(1000 // self.FPS); self.timer.timeout.connect(self.tick)

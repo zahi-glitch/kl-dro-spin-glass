@@ -25,7 +25,7 @@ class Chapter2(QWidget):
         lay.addWidget(label(self.TITLE, "title"))
         lay.addWidget(label("Nature does not compute partition functions: it <b>optimises</b>. Among all ways of spreading "
                             "probability over the states, the [[gibbs|Gibbs distribution]] is the one that best balances "
-                            "low [[energy]] against high [[entropy]], and the best value it reaches is the "
+                            "low [[energy|energy]] against high [[entropy]], and the best value it reaches is the "
                             "[[free-energy|free energy]] log Z. Every model in the next sections is an instance of this.", "lead"))
 
         # left: the distributions and the objective
@@ -81,7 +81,7 @@ class Chapter2(QWidget):
         ml.add(label("<b>Softmax.</b> With logits −E and temperature 1/β, the softmax <i>is</i> the Gibbs distribution: "
                      "the probabilities that best trade a high score against spread.<br>"
                      "<b>Variational inference.</b> log p(x) = max<sub>q</sub> { E<sub>q</sub>[log p(x, z)] + H(q) }: "
-                     "the ELBO is this principle with −E = log p(x, z), and the gap is again a KL divergence.<br>"
+                     "the ELBO (evidence lower bound) is this principle with −E = log p(x, z), and the gap is again a KL divergence.<br>"
                      "<b>Entropy regularisation.</b> Adding +H to an objective (soft-max policies, label smoothing) "
                      "is choosing a Gibbs distribution.", "body"))
         ml.add(Deeper(
@@ -93,13 +93,17 @@ class Chapter2(QWidget):
             "with the penalty becoming a budget in the robust-optimisation section."))
 
         self.reco = label("", "body")
-        practice = Practice(
-            "How much exposure each product gets",
-            "Read the ten states as ten products in a recommender, with relevance scores s = −E. Showing "
-            "product i with probability ∝ e<sup>β s<sub>i</sub></sup> is exactly the Gibbs distribution: β trades "
-            "<b>relevance</b> (energy) against <b>variety</b> (entropy). β = 0 shows everything equally; large β "
-            "shows only the top product and never learns about the others.")
-        practice.add(self.reco)
+        practice = Practice("How much screen time should each product get?", rows=[
+            ("Setting", "A recommender shows one of n = 10 products. Product i has a relevance score "
+                        "s<sub>i</sub> = −E<sub>i</sub>. A policy is a probability vector q = (q<sub>1</sub>, …, q<sub>n</sub>): "
+                        "how often each product is shown."),
+            ("The rule", "Maximise relevance plus variety: max<sub>q</sub> { E<sub>q</sub>[s] + β<sup>−1</sup>·Ent(q) }. "
+                         "The answer is the softmax q<sub>i</sub> = e<sup>βs<sub>i</sub></sup> / Σ<sub>j</sub> e<sup>βs<sub>j</sub></sup>: "
+                         "exactly the [[gibbs|Gibbs distribution]] of this section."),
+            ("Read the dial", "β = 0: every product equally often (pure exploration). β → ∞: only the best one "
+                              "(pure exploitation, and the system never learns about the others)."),
+            ("Live", self.reco),
+        ])
         lay.addWidget(_two_columns(_column(dists, objective), _column(controls, nums, practice, ml)), 1)
         self.beta.changed.connect(lambda _: self.refresh())
         self.t.changed.connect(lambda _: self.refresh())
@@ -120,6 +124,6 @@ class Chapter2(QWidget):
         self.plot_o.setYRange(lo, max(curves.max(), lz) + 0.3)
         self.v_obj.setText(f"{val:.3f}"); self.v_logz.setText(f"{lz:.3f}"); self.v_kl.setText(f"{lz - val:.3f}")
         top = np.sort(p)[::-1]
-        smooth = f" The free energy divided by β, (1/β) log Z = <b>{lz / beta:.2f}</b>, is a <i>smooth maximum</i> of the scores (the hard maximum is {-ENERGIES.min():.2f}); ML uses this log-sum-exp wherever it needs a differentiable max." if beta > 0.05 else ""
+        smooth = f" The free energy divided by β, (1/β) log Z = <b>{lz / beta:.2f}</b>, is a <i>smooth maximum</i> of the scores (the hard maximum is {-ENERGIES.min():.2f}); machine learning uses this log-sum-exp wherever it needs a differentiable max." if beta > 0.05 else ""
         self.reco.setText(f"At β = {beta:.2f}: the top product gets <b>{top[0]:.0%}</b> of the exposure, the top three "
                           f"<b>{top[:3].sum():.0%}</b>.{smooth}")

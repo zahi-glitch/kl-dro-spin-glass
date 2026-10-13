@@ -61,15 +61,29 @@ class Card(QFrame):
 
 
 class Practice(Card):
-    """'In practice' card: a concrete use of the idea on the page."""
+    """'In practice' card as a question and a structured answer.
 
-    def __init__(self, title: str, body: str = ""):
+    rows: list of (label, html or widget) pairs, e.g. ("Setting", ...), ("Try it", ...), ("Live", a QLabel).
+    """
+
+    def __init__(self, question: str, rows=None, body: str = ""):
         super().__init__()
         self.setObjectName("practice")
         self.lay.addWidget(label("IN PRACTICE", "tag"))
-        self.lay.addWidget(label(title, "h2"))
+        self.lay.addWidget(label(question, "h2"))
         if body:
             self.lay.addWidget(label(body, "body"))
+        if rows:
+            from PySide6.QtWidgets import QGridLayout
+            grid = QWidget(); g = QGridLayout(grid); g.setContentsMargins(0, 2, 0, 0)
+            g.setHorizontalSpacing(12); g.setVerticalSpacing(8)
+            for r, (name, html) in enumerate(rows):
+                key = label(f"<b>{name}</b>", "small"); key.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+                key.setFixedWidth(96)
+                g.addWidget(key, r, 0)
+                g.addWidget(html if isinstance(html, QWidget) else label(html, "body"), r, 1)
+            g.setColumnStretch(1, 1)
+            self.lay.addWidget(grid)
 
 
 class SpinGrid(QWidget):

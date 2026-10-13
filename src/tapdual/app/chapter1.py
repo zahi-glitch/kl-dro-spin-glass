@@ -77,14 +77,18 @@ class HopfieldPage(QWidget):
             "Here N = 256 and 3 memories; recall survives up to about 0.138·N random memories "
             "(Amit, Gutfreund, Sompolinsky). Next tab: this network is a restricted Boltzmann machine in disguise."))
 
-        practice = Practice(
-            "Search by content, not by address",
-            "Press <b>Half unknown</b>: the bottom half becomes random static, and the network still returns the "
-            "whole symbol. That is a <b>content-addressable memory</b>: you retrieve a complete item from a fragment "
-            "or a noisy copy, like completing a half-remembered phone number or cleaning a damaged scan of a code. "
-            "The same idea lives on in machine learning: the update rule of modern Hopfield networks is the "
-            "<b>attention</b> mechanism of transformers (Ramsauer et al., 2020), where the query is the noisy pattern "
-            "and the keys are the stored memories.")
+        practice = Practice("Can you find something when you only remember half of it?", rows=[
+            ("The idea", "A <b>content-addressable memory</b> retrieves a stored item from a piece of its content, "
+                         "not from an address. A phone book works by address (the name); a Hopfield network works by "
+                         "content: give it a fragment or a noisy copy, get the whole item back."),
+            ("Try it", "Press <b>Half unknown</b>: the bottom half of the chosen symbol is replaced by random ±1 "
+                       "static. Press <b>Recall</b>."),
+            ("Why it works", "Each step lowers the [[energy|energy]] H(σ) = −(N/2) Σ<sub>μ</sub> m<sub>μ</sub>(σ)². The known half "
+                             "already has a large [[overlap]] with one memory, so the nearest valley is that memory."),
+            ("Where it is used", "Modern Hopfield networks (Ramsauer et al., 2020): their update rule is the "
+                                 "<b>attention</b> step of a transformer. The query is the noisy pattern, the keys are "
+                                 "the stored memories, and a softmax picks the closest one."),
+        ])
         self.layout_ = _two_columns(_column(state, practice), _column(memories, controls, overlaps))
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.addWidget(self.layout_)
 
@@ -199,7 +203,7 @@ class SKPage(QWidget):
 
         self.practice_readout = label("", "body")
         practice = Practice(
-            "Many good answers that look nothing alike",
+            "Many good answers that look nothing alike", body=
             "Minimising this energy is a <b>Max-Cut</b> problem: split 256 nodes into two groups so that the "
             "total weight of the links you cut (with weights −J<sub>ij</sub>) is as large as possible. Problems of "
             "this kind (scheduling, chip layout, portfolio selection with pairwise interactions) are routinely "
@@ -317,14 +321,18 @@ class REMPage(QWidget):
             "and the same m as in the Parisi formula."))
 
         self.tokens = label("", "body")
-        practice = Practice(
-            "Temperature when a language model picks the next word",
-            "A language model chooses the next token with a softmax over a vocabulary of tens of thousands of "
-            "tokens: probability ∝ e<sup>logit/T</sup>. Read the 65,536 states here as a vocabulary and the "
-            "random energies as (minus) logits, a deliberately crude toy. The <b>effective number of states</b> "
-            "is then the number of tokens really in play. Lowering the temperature makes the choice collapse "
-            "onto a handful of tokens: the sampler <b>freezes</b> and becomes almost deterministic.")
-        practice.add(self.tokens)
+        practice = Practice("What does 'temperature' do when a chatbot writes?", rows=[
+            ("Setting", "A large language model (LLM) picks the next token (a word or word piece) from a vocabulary "
+                        "of tens of thousands, with probability p<sub>i</sub> ∝ e<sup>ℓ<sub>i</sub>/T</sup>: ℓ<sub>i</sub> are its "
+                        "scores (logits), T is the sampling temperature."),
+            ("Toy model", "Read the 65,536 states here as tokens and the random energies as minus the logits. "
+                          "This is deliberately crude: real logits are not independent random numbers."),
+            ("Measure", "Effective number of tokens in play: N<sub>eff</sub> = 1 / Σ<sub>i</sub> p<sub>i</sub>² "
+                        "(all equal: N<sub>eff</sub> = vocabulary size; one certain token: N<sub>eff</sub> = 1)."),
+            ("Live", self.tokens),
+            ("Lesson", "Below a critical temperature the choice <b>freezes</b> onto a handful of tokens: the REM "
+                       "transition at β<sub>c</sub> = √(2 log 2), in this model's scaling."),
+        ])
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(_two_columns(_column(weights, entropy), _column(controls, stats, practice, explain)))
         self.beta.changed.connect(lambda _: self.refresh())

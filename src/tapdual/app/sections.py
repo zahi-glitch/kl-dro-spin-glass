@@ -84,13 +84,17 @@ class CurieWeissSection(Section):
         self.loop_curve = self.plot_h.plot(pen=pg.mkPen(theme.ACCENT, width=2))
         self.sweep_btn = QPushButton("Sweep the incentive  ↔")
         self.loop_text = label("", "body")
-        practice = Practice(
-            "Peer effects: tipping points and lock-in",
-            "Read each spin as a person who adopts a product (+1) or not (−1), h as the price incentive and β as the "
-            "strength of peer influence. This is the discrete-choice model with social interactions of Brock and "
-            "Durlauf (2001). Press <b>Sweep</b>: the incentive is slowly raised and lowered again. With strong peer "
-            "effects (β &gt; 1) adoption jumps abruptly and does not jump back at the same price: hysteresis. Two "
-            "markets with identical prices can sit in opposite states.")
+        practice = Practice("Why do markets tip, and why don't they tip back?", rows=[
+            ("Model", "N people choose σ<sub>i</sub> = +1 (adopt a product) or −1 (not). Each one's incentive is "
+                      "h (price, private taste) plus the average choice m of the others (peer effect); β measures how "
+                      "strongly people respond. This is the discrete-choice model with social interactions of "
+                      "Brock and Durlauf (2001)."),
+            ("Equilibrium", "m = tanh(β(m + h)): the same equation as the magnet."),
+            ("Try it", "Press <b>Sweep</b>: h rises from −0.3 to +0.3 and falls back, starting with nobody adopting."),
+            ("What you see", "β &lt; 1: adoption follows the price smoothly. β &gt; 1: it <b>jumps</b> up at one price "
+                             "and jumps back only at a much lower one (hysteresis). Two markets with the same price can "
+                             "sit in opposite states: history matters."),
+        ])
         practice.add(self.sweep_btn); practice.add(self.plot_h); practice.add(self.loop_text)
 
         self.lay.addWidget(_two_columns(_column(sim, landscape), _column(controls, practice)), 1)
@@ -211,13 +215,15 @@ class CapacityPage(QWidget):
             "A full proof, an analogue of the [[parisi|Parisi formula]] for the Hopfield model, is not available.",
             "body"))
 
-        practice = Practice(
-            "How much can an associative memory hold?",
-            "The classical network stores about 0.14 memories per neuron. Dense associative memories, with "
-            "higher-order interactions, store many more (Krotov and Hopfield, 2016), and modern continuous Hopfield "
-            "networks store exponentially many (Demircigil et al., 2017; Ramsauer et al., 2020): that is the regime in "
-            "which a transformer's attention retrieves one stored item from a query.")
-
+        practice = Practice("How many memories fit in N neurons?", rows=[
+            ("Classical", "Hebbian Hopfield network, pairwise couplings: about 0.138·N random memories. "
+                          "This is the AGS value (Amit, Gutfreund, Sompolinsky, 1985), the curve on the left."),
+            ("Dense", "Dense associative memories (Krotov and Hopfield, 2016) replace m² in the energy by mⁿ, "
+                      "interactions among n neurons at a time: capacity grows like Nⁿ⁻¹."),
+            ("Modern", "With an exponential interaction the capacity becomes exponential in N (Demircigil et al., "
+                       "2017). The continuous version (Ramsauer et al., 2020) retrieves in one step, and that step is "
+                       "a transformer's attention."),
+        ])
         lay.addWidget(_two_columns(_column(exp), _column(known, practice)), 1)
         self.timer = QTimer(self); self.timer.setInterval(10); self.timer.timeout.connect(self.step)
         self.run_btn.clicked.connect(self.start)
