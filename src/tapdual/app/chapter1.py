@@ -40,7 +40,7 @@ class HopfieldPage(QWidget):
 
         self.grid = SpinGrid(cell=22)
         self.status = label("", "small")
-        state = Card("The network", "Each pixel is a neuron that is on (+1) or off (−1). "
+        state = Card("The network", "Each pixel is a neuron σ<sub>i</sub>, on (+1) or off (−1). "
                      "Press <b>Recall</b> and watch it roll downhill in energy.")
         state.add(self.grid, 1); state.add(self.status)
 
@@ -55,7 +55,7 @@ class HopfieldPage(QWidget):
         memories.add(thumbs)
 
         self.noise = LabeledSlider("Corruption", 0.0, 0.5, 0.3, 100, fmt=lambda v: f"{v:.0%} of pixels flipped")
-        self.temp = LabeledSlider("Temperature T", 0.0, 2.0, 0.15, 200,
+        self.temp = LabeledSlider("Temperature T = 1/β", 0.0, 2.0, 0.15, 200,
                                   hint="T = 0: always go downhill. Large T: random flips, memories melt.")
         buttons = QWidget(); bl = QHBoxLayout(buttons); bl.setContentsMargins(0, 4, 0, 0)
         self.corrupt_btn = QPushButton("Corrupt")
@@ -69,11 +69,11 @@ class HopfieldPage(QWidget):
                         "These [[overlap|overlaps]] are the [[order-parameter|order parameters]] of the network.")
         overlaps.add(self.bars)
         overlaps.add(Deeper(
-            "Energy E(s) = −½ Σ<sub>ij</sub> J<sub>ij</sub> s<sub>i</sub> s<sub>j</sub>, with Hebbian couplings "
+            "Energy H(σ) = −½ Σ<sub>i≠j</sub> J<sub>ij</sub> σ<sub>i</sub> σ<sub>j</sub>, with Hebbian couplings "
             "J<sub>ij</sub> = (1/N) Σ<sub>μ</sub> ξ<sub>i</sub><sup>μ</sup> ξ<sub>j</sub><sup>μ</sup>. In terms of the overlaps "
-            "m<sub>μ</sub> = (1/N) Σ<sub>i</sub> ξ<sub>i</sub><sup>μ</sup> s<sub>i</sub>, the energy is −(N/2) Σ<sub>μ</sub> m<sub>μ</sub><sup>2</sup> "
-            "+ const: each memory is a valley. The dynamics is Glauber's: s<sub>i</sub> = +1 with probability "
-            "1/(1 + e<sup>−2h<sub>i</sub>/T</sup>), h<sub>i</sub> = Σ<sub>j</sub> J<sub>ij</sub> s<sub>j</sub>. "
+            "m<sub>μ</sub>(σ) = (1/N) Σ<sub>i</sub> ξ<sub>i</sub><sup>μ</sup> σ<sub>i</sub>, the energy is −(N/2) Σ<sub>μ</sub> m<sub>μ</sub><sup>2</sup> "
+            "+ const: each memory is a valley. The dynamics is [[glauber|Glauber's]]: σ<sub>i</sub> = +1 with probability "
+            "1/(1 + e<sup>−2h<sub>i</sub>/T</sup>), local field h<sub>i</sub> = Σ<sub>j</sub> J<sub>ij</sub> σ<sub>j</sub>. "
             "Here N = 256 and 3 memories; recall survives up to about 0.138·N random memories "
             "(Amit, Gutfreund, Sompolinsky). Next tab: this network is a restricted Boltzmann machine in disguise."))
 
@@ -312,20 +312,22 @@ class REMPage(QWidget):
         explain.add(label("There are only 2<sup>N</sup> configurations, so the entropy can never exceed log 2 per spin. "
                           "That is a <b>budget</b>. Above β<sub>c</sub> the Gibbs measure has spent it all and "
                           "<b>freezes</b> onto a few states. In the robust-optimisation section the same budget reappears as a "
-                          "KL-divergence constraint, and the freezing as the moment the constraint binds.", "body"))
+                          "constraint on the [[kl|relative entropy]], H(ν | μ) ≤ log 2, and the freezing as the moment the "
+                          "constraint binds.", "body"))
         explain.add(Deeper(
-            "Derrida's REM: energies E<sub>α</sub> ~ N(0, N) independent for α = 1…2<sup>N</sup>. "
-            "Free energy (1/N) log Σ<sub>α</sub> e<sup>−βE<sub>α</sub></sup> → log 2 + β²/2 for β ≤ β<sub>c</sub> = √(2 log 2), "
+            "Derrida's REM: energies H(σ) ~ N(0, N) independent for the 2<sup>N</sup> configurations σ. "
+            "Free energy (1/N) log Σ<sub>σ</sub> e<sup>−βH(σ)</sup> → log 2 + β²/2 for β ≤ β<sub>c</sub> = √(2 log 2), "
             "and β·√(2 log 2) above. In the frozen phase the normalised weights of the lowest states converge to a "
-            "Poisson–Dirichlet point process with parameter m = β<sub>c</sub>/β: the 1-step replica-symmetry-breaking picture, "
-            "and the same m as in the Parisi formula."))
+            "[[poisson-dirichlet|Poisson–Dirichlet]] distribution with parameter m = β<sub>c</sub>/β ∈ (0, 1): the "
+            "one-step [[rsb|replica-symmetry-breaking]] (1RSB) picture, and the same m as in the [[parisi|Parisi formula]]."))
 
         self.tokens = label("", "body")
         practice = Practice("What does 'temperature' do when a chatbot writes?", rows=[
             ("Setting", "A large language model (LLM) picks the next token (a word or word piece) from a vocabulary "
                         "of tens of thousands, with probability p<sub>i</sub> ∝ e<sup>ℓ<sub>i</sub>/T</sup>: ℓ<sub>i</sub> are its "
                         "scores (logits), T is the sampling temperature."),
-            ("Toy model", "Read the 65,536 states here as tokens and the random energies as minus the logits. "
+            ("Toy model", "Read the 65,536 states here as tokens and the random energies H(σ) as minus the logits "
+                          "(so β = 1/T). "
                           "This is deliberately crude: real logits are not independent random numbers."),
             ("Measure", "Effective number of tokens in play: N<sub>eff</sub> = 1 / Σ<sub>i</sub> p<sub>i</sub>² "
                         "(all equal: N<sub>eff</sub> = vocabulary size; one certain token: N<sub>eff</sub> = 1)."),
@@ -360,7 +362,8 @@ class REMPage(QWidget):
             self.phase.setText(f"β below β<sub>c</sub>: the probability is spread over exponentially many states (high temperature).")
         else:
             self.phase.setText(f"β above β<sub>c</sub>: frozen. A few states carry almost all the probability "
-                               f"(Poisson–Dirichlet with m = β<sub>c</sub>/β = {sg.REM.beta_c / b:.2f}).")
+                               f"(their sizes follow a Poisson–Dirichlet law with parameter m = β<sub>c</sub>/β = "
+                               f"{sg.REM.beta_c / b:.2f}; details in the box below).")
 
 
 # --------------------------------------------------------------------------- chapter

@@ -129,10 +129,10 @@ class RBMPage(QWidget):
                       "overlaps, so each square becomes one hidden unit. Integrate the hidden units out and you are "
                       "back to Hopfield; keep them and you have an RBM.", "body"))
         why.add(Deeper(
-            "Joint weight of the RBM: exp( −½ Σ<sub>μ</sub> z<sub>μ</sub>² + √(β/N) Σ<sub>i,μ</sub> ξ<sub>i</sub><sup>μ</sup> s<sub>i</sub> z<sub>μ</sub> ). "
-            "Conditionals: z<sub>μ</sub> | s ~ N(√(βN) m<sub>μ</sub>, 1) and P(s<sub>i</sub> = +1 | z) = 1/(1 + e<sup>−2h<sub>i</sub></sup>), "
+            "Joint weight of the RBM: exp( −½ Σ<sub>μ</sub> z<sub>μ</sub>² + √(β/N) Σ<sub>i,μ</sub> ξ<sub>i</sub><sup>μ</sup> σ<sub>i</sub> z<sub>μ</sub> ). "
+            "Conditionals: z<sub>μ</sub> | σ ~ N(√(βN) m<sub>μ</sub>, 1) and P(σ<sub>i</sub> = +1 | z) = 1/(1 + e<sup>−2h<sub>i</sub></sup>), "
             "h<sub>i</sub> = √(β/N) Σ<sub>μ</sub> ξ<sub>i</sub><sup>μ</sup> z<sub>μ</sub>. Integrating z gives exp((βN/2) Σ<sub>μ</sub> m<sub>μ</sub>²), the Hopfield "
-            "Gibbs weight. The package's test checks this on all 2⁶ states of a small machine. Integrating instead over s "
+            "Gibbs weight. The package's test checks this on all 2⁶ states of a small machine. Integrating instead over σ "
             "gives the hidden layer an energy Σ<sub>i</sub> log cosh(h<sub>i</sub>): the same free energy seen from the other side "
             "(Barra et al. 2012). With more layers, a three-layer RBM reduces to a two-species Hopfield network "
             "(Agliari, Migliozzi, Tantari); its learning and retrieval regimes are studied in "

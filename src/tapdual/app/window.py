@@ -46,7 +46,8 @@ class MainWindow(QMainWindow):
                 item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
             self.nav.addItem(item)
         sl.addWidget(self.nav, 1)
-        sl.addWidget(label("Blue words open a short explanation with the formulas.", "small"))
+        sl.addWidget(label("Blue words open a short explanation with the formulas. "
+                           "All symbols: [[notation|notation table]].", "small"))
         sl.addWidget(label("Based on Kistler, Schmidt, Sebastiani (2023) and Sebastiani, Schmidt (2024).", "small"))
 
         self.stack = QStackedWidget()

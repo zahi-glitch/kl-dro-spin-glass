@@ -11,6 +11,23 @@ import re
 from functools import lru_cache
 
 ENTRIES: dict[str, tuple[str, list]] = {
+    "notation": ("Notation used throughout", [
+        ("p", "<b>Configurations.</b> σ = (σ<sub>1</sub>, …, σ<sub>N</sub>), each spin σ<sub>i</sub> = ±1. "
+              "Energy (Hamiltonian) H(σ), written H<sub>N</sub> when the size N matters. "
+              "β = 1/T is the inverse temperature."),
+        ("p", "<b>Measures.</b> μ: the reference (a priori) distribution, e.g. uniform on {−1, +1}<sup>N</sup> or a standard "
+              "Gaussian. μ<sub>β</sub>: the Gibbs measure. ν: a trial distribution; in robust optimisation, the adversary's choice."),
+        ("eq", r"$\mu_\beta(\sigma)=\frac{e^{-\beta H(\sigma)}}{Z},\qquad Z=\sum_\sigma e^{-\beta H(\sigma)}$"),
+        ("p", "<b>Information.</b> Ent(ν): entropy. H(ν | μ): relative entropy, also called the Kullback–Leibler (KL) "
+              "divergence. The letter H with a bar and two measures is always relative entropy, never the energy. "
+              "ρ: the entropy budget, ρ = log 2 for REM-type models."),
+        ("eq", r"$\mathrm{Ent}(\nu)=-\sum_\sigma \nu(\sigma)\log\nu(\sigma),\qquad H(\nu\,|\,\mu)=\sum_\sigma \nu(\sigma)\log\frac{\nu(\sigma)}{\mu(\sigma)}$"),
+        ("p", "<b>Order parameters.</b> m = (1/N) Σ σ<sub>i</sub>: magnetisation (Curie–Weiss). "
+              "m<sub>μ</sub> = (1/N) Σ ξ<sub>i</sub><sup>μ</sup> σ<sub>i</sub>: overlap with the stored pattern ξ<sup>μ</sup>, "
+              "μ = 1, …, P, load α = P/N (Hopfield). q: overlap between two replicas. In the Parisi-type formula the "
+              "pair (q, m) is the dual variable: q ∈ [0, 1] an overlap, m ∈ (0, 1] the replica-symmetry-breaking parameter "
+              "(the m = β<sub>c</sub>/β of the REM). Context tells the two m's apart."),
+    ]),
     "spin": ("Spin", [
         ("p", "A variable that takes two values, σ = +1 or σ = −1: up or down, on or off, yes or no. "
               "A configuration of N spins is a vector σ ∈ {−1, +1}<sup>N</sup>, so there are 2<sup>N</sup> configurations."),
@@ -36,13 +53,15 @@ ENTRIES: dict[str, tuple[str, list]] = {
               "the average energy, the magnetisation and every other observable, and its non-smooth points are the "
               "phase transitions. (Physicists put a factor −1/β in front; here we use the probabilists' sign.)"),
         ("eq", r"$f_N(\beta)=\frac{1}{N}\log Z_N(\beta)$"),
-        ("p", "Gibbs variational principle: the free energy is the best trade-off between energy and entropy."),
-        ("eq", r"$\log Z_N(\beta)=\max_{q}\left\{-\beta\,\mathbb{E}_q[H_N]+\mathrm{Ent}(q)\right\}$"),
+        ("p", "Gibbs variational principle: the free energy is the best trade-off between energy and entropy, "
+              "over all trial distributions ν; the maximiser is the Gibbs measure."),
+        ("eq", r"$\log Z_N(\beta)=\max_{\nu}\left\{-\beta\,\mathbb{E}_\nu[H_N]+\mathrm{Ent}(\nu)\right\}$"),
     ]),
     "entropy": ("Entropy", [
         ("p", "How spread out a probability distribution is. It is largest (log n) for the uniform distribution "
-              "on n states and zero for a distribution concentrated on one state."),
-        ("eq", r"$\mathrm{Ent}(q)=-\sum_{x} q(x)\log q(x)$"),
+              "on n states and zero for a distribution concentrated on one state. With μ uniform, "
+              "Ent(ν) = log n − H(ν | μ): entropy is relative entropy seen from the uniform distribution."),
+        ("eq", r"$\mathrm{Ent}(\nu)=-\sum_{\sigma} \nu(\sigma)\log \nu(\sigma)$"),
     ]),
     "kl": ("Relative entropy (Kullback–Leibler divergence)", [
         ("p", "How far a distribution ν is from a reference μ. It is never negative and is zero only when ν = μ. "
@@ -94,10 +113,10 @@ ENTRIES: dict[str, tuple[str, list]] = {
         ("eq", r"$J_{ij}=\frac{1}{N}\sum_{\mu=1}^{P}\xi_i^\mu\xi_j^\mu$"),
     ]),
     "rbm": ("Restricted Boltzmann machine", [
-        ("p", "A two-layer probabilistic model with visible units s and hidden units z and links only between the "
-              "layers. With Gaussian hidden units its visible marginal is exactly a Hopfield model "
-              "(Barra, Bernacchia, Santucci, Contucci 2012)."),
-        ("eq", r"$P(s,z)\propto \exp\!\left(-\frac{1}{2}\sum_\mu z_\mu^2+\sqrt{\frac{\beta}{N}}\sum_{i,\mu}\xi_i^\mu s_i z_\mu\right)$"),
+        ("p", "A two-layer probabilistic model with visible units σ and hidden units z and links only between the "
+              "layers ('restricted': no links inside a layer). With Gaussian hidden units its visible marginal is "
+              "exactly a Hopfield model (Barra, Bernacchia, Santucci, Contucci 2012)."),
+        ("eq", r"$P(\sigma,z)\propto \exp\!\left(-\frac{1}{2}\sum_\mu z_\mu^2+\sqrt{\frac{\beta}{N}}\sum_{i,\mu}\xi_i^\mu \sigma_i z_\mu\right)$"),
         ("eq", r"$\int e^{-\frac{z^2}{2}+a z}\,\frac{dz}{\sqrt{2\pi}}=e^{a^2/2}$"),
         ("p", "This Gaussian identity is a Legendre transform in disguise: the hidden unit is the dual variable of "
               "the convex function m ↦ m²/2."),
@@ -125,7 +144,7 @@ ENTRIES: dict[str, tuple[str, list]] = {
         ("p", "The mean-field spin glass: Gaussian couplings between all pairs. Its free energy is given by the "
               "Parisi formula (proved by Guerra and Talagrand). A heavily loaded Hopfield network behaves like it: "
               "the cross-talk between many random patterns acts as random couplings."),
-        ("eq", r"$H_N(\sigma)=-\frac{1}{\sqrt N}\sum_{i<j}g_{ij}\sigma_i\sigma_j,\qquad g_{ij}\ \mathrm{i.i.d.}\ \mathcal{N}(0,1)$"),
+        ("eq", r"$H_N(\sigma)=-\frac{1}{\sqrt{N}}\sum_{i<j}g_{ij}\sigma_i\sigma_j,\qquad g_{ij}\ \mathrm{i.i.d.}\ \mathcal{N}(0,1)$"),
         ("eq", r"$\lim_{N\to\infty}\frac{1}{N}\log Z_N=\inf_{x}\ \mathcal{P}_\beta(x)$"),
     ]),
     "rem": ("Random Energy Model (REM)", [
@@ -133,7 +152,42 @@ ENTRIES: dict[str, tuple[str, list]] = {
               "It freezes at β<sub>c</sub> = √(2 log 2), where the Gibbs measure concentrates on a handful of "
               "configurations."),
         ("eq", r"$H_N(\alpha)\ \mathrm{i.i.d.}\ \mathcal{N}(0,N),\quad \alpha=1,\dots,2^N$"),
-        ("eq", r"$\lim\frac{1}{N}\log Z_N=\begin{cases}\log 2+\beta^2/2, & \beta\le\beta_c\\ \beta\beta_c, & \beta>\beta_c\end{cases}$"),
+        ("eq", r"$\lim\frac{1}{N}\log Z_N=\log 2+\frac{\beta^2}{2}\quad(\beta\leq\beta_c),\qquad =\beta\,\beta_c\quad(\beta>\beta_c)$"),
+    ]),
+    "glauber": ("Glauber dynamics", [
+        ("p", "A Markov chain that samples the Gibbs measure: pick a spin at random and redraw it from its conditional "
+              "law given all the others (a heat-bath update). Here h<sub>i</sub> is the local field felt by spin i. "
+              "At T = 0 the spin simply aligns with its field: the energy never goes up."),
+        ("eq", r"$P(\sigma_i=+1\mid \sigma_{j\neq i})=\frac{1}{1+e^{-2\beta h_i}},\qquad h_i=\sum_{j\neq i}J_{ij}\sigma_j+h$"),
+    ]),
+    "large-deviations": ("Large deviations (Cramér)", [
+        ("p", "The probability that an average of N independent samples lands far from its mean decays exponentially "
+              "in N; the exponent is the rate function. For fair ±1 coins (Cramér's theorem):"),
+        ("eq", r"$P\left(\frac{1}{N}\sum_{i=1}^N\sigma_i\approx m\right)\approx e^{-N I(m)},\quad I(m)=\frac{1+m}{2}\log(1+m)+\frac{1-m}{2}\log(1-m)$"),
+        ("p", "Combined with the Laplace principle (on the log scale, a sum of terms e<sup>N a<sub>k</sub></sup> is its "
+              "largest term), this turns free energies into variational formulas. Sanov's theorem is the version for "
+              "whole empirical distributions, with rate H(ν | μ)."),
+        ("eq", r"$\frac{1}{N}\log\sum_k e^{N a_k}\ \to\ \max_k a_k$"),
+    ]),
+    "replica-symmetry": ("Replica symmetry", [
+        ("p", "Draw two configurations σ<sup>1</sup>, σ<sup>2</sup> independently from the same Gibbs measure: "
+              "two <i>replicas</i>. The system is replica-symmetric when their overlap q concentrates on a single value "
+              "as N → ∞. The free energy is then a formula in that one number q (the 'RS solution'). "
+              "When q stays random, symmetry is broken: see replica symmetry breaking."),
+        ("eq", r"$q_{12}=\frac{1}{N}\sum_{i=1}^N\sigma^1_i\sigma^2_i\ \longrightarrow\ q\quad\mathrm{(RS)}$"),
+    ]),
+    "interpolation": ("Guerra's interpolation", [
+        ("p", "A proof technique: build a path H<sub>t</sub>, t ∈ [0, 1], from the hard model (t = 1) to a solvable one "
+              "(t = 0) and control the derivative of the free energy along the path. Guerra used it in 2003 to show "
+              "that the Parisi formula is an upper bound for the SK free energy; Talagrand completed the proof."),
+        ("eq", r"$\varphi(t)=\frac{1}{N}\mathbb{E}\log\sum_\sigma e^{-\beta H_t(\sigma)},\qquad \varphi(1)=\varphi(0)+\int_0^1\varphi'(t)\,dt$"),
+    ]),
+    "poisson-dirichlet": ("Poisson–Dirichlet distribution", [
+        ("p", "A random way to break a stick of length 1 into infinitely many pieces, a few large and many tiny. "
+              "In the frozen REM, the Gibbs weights of the lowest-energy configurations, ranked by size, follow this "
+              "law with parameter m = β<sub>c</sub>/β ∈ (0, 1): a smaller m (lower temperature) means fewer, larger "
+              "pieces. It comes from normalising the points of a Poisson process with intensity x<sup>−1−m</sup> dx."),
+        ("eq", r"$w_k=\frac{x_k}{\sum_j x_j},\qquad (x_k)\ \mathrm{Poisson\ process\ on\ }(0,\infty)\ \mathrm{with\ intensity}\ m\,x^{-1-m}dx$"),
     ]),
     "rsb": ("Replica symmetry breaking", [
         ("p", "Parisi's description of the low-temperature phase of spin glasses. Two independent configurations "
@@ -144,7 +198,7 @@ ENTRIES: dict[str, tuple[str, list]] = {
         ("p", "The free energy of mean-field spin glasses written as an <b>infimum</b> over a functional order "
               "parameter (a distribution function on [0, 1]). For the REM-type models of this project the same "
               "infimum appears as the Lagrangian dual of a supremum over measures with an entropy budget."),
-        ("eq", r"$\sup_{\nu:\,H(\nu|\mu)\le\log 2}\left\{\Phi\!\left(\int\varphi^2d\nu\right)+\int f\,d\nu-H(\nu|\mu)\right\}=\inf_{(q,m)}P(q,m)$"),
+        ("eq", r"$\sup_{\nu:\,H(\nu|\mu)\leq\log 2}\left\{\Phi\!\left(\int\varphi^2d\nu\right)+\int f\,d\nu-H(\nu|\mu)\right\}=\inf_{(q,m)}P(q,m)$"),
     ]),
 }
 
@@ -159,10 +213,17 @@ def linkify(text: str, color: str) -> str:
         if not shown:
             title = ENTRIES.get(key, (key,))[0]
             proper = title.split()[0] in {"Curie–Weiss", "Hopfield", "Sherrington–Kirkpatrick", "Random",
-                                          "Parisi", "Hebb's", "Legendre", "Gibbs"}
+                                          "Parisi", "Hebb's", "Legendre", "Gibbs", "Glauber", "Guerra's",
+                                          "Poisson–Dirichlet"}
             shown = title if proper else title[0].lower() + title[1:]
         return f"<a href='gloss:{key}' style='color:{color}; text-decoration:none;'>{shown}</a>"
-    return _LINK.sub(rep, text)
+    return _NU.sub(_NU_HTML, _LINK.sub(rep, text))
+
+
+# In the sans-serif interface font the Greek ν is indistinguishable from a Latin v,
+# so it is always set in a serif italic, as in a formula.
+_NU = re.compile("ν")
+_NU_HTML = "<span style='font-family:\"STIX Two Math\",\"Cambria Math\",\"Times New Roman\",serif; font-style:italic;'>ν</span>"
 
 
 @lru_cache(maxsize=256)

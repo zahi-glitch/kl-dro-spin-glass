@@ -35,10 +35,10 @@ class CurieWeissSection(Section):
     def __init__(self):
         super().__init__(
             "2", "Curie–Weiss: everyone agrees",
-            "The simplest collective behaviour. Every [[spin]] feels the average of all the others, so the only "
-            "thing that matters is the [[magnetisation]] m. Below a critical temperature the system picks a side "
-            "on its own: a [[phase-transition|phase transition]]. Its [[free-energy|free energy]] is a supremum over "
-            "one number, m.")
+            "The simplest collective behaviour. Every [[spin]] σ<sub>i</sub> = ±1 feels the average of all the others, "
+            "so the only thing that matters is the [[magnetisation]] m = (1/N) Σ<sub>i</sub> σ<sub>i</sub>. Below a critical "
+            "temperature the system picks a side on its own: a [[phase-transition|phase transition]]. Its "
+            "[[free-energy|free energy]] is a supremum over one number, m.")
         self.rng = np.random.default_rng()
         self.s = self.rng.choice([-1.0, 1.0], sg.N_SPINS)
         self.hist_t, self.hist_m, self.t = [], [], 0.0
@@ -47,7 +47,8 @@ class CurieWeissSection(Section):
 
         self.grid = SpinGrid(cell=14)
         self.m_label = label("", "small")
-        sim = Card("256 spins, all coupled to all", "Black = +1, light = −1. Glauber dynamics at the chosen β and field h.")
+        sim = Card("256 spins, all coupled to all", "Black = +1, light = −1. Energy H(σ) = −(N/2) m² − h Σ<sub>i</sub> σ<sub>i</sub>, simulated by "
+                   "[[glauber|Glauber dynamics]] at the chosen β and field h.")
         sim.add(self.grid, 1); sim.add(self.m_label)
 
         self.plot_l = pg.PlotWidget(); theme.style_plot(self.plot_l.getPlotItem(), "magnetisation m", "φ(m)")
@@ -58,19 +59,21 @@ class CurieWeissSection(Section):
         self.now_line = pg.InfiniteLine(angle=90, pen=pg.mkPen(theme.ACCENT_2, width=1.5))
         self.plot_l.addItem(self.now_line)
         landscape = Card("The free-energy landscape",
-                         f"φ(m) = βm²/2 + βhm − I(m): energy gain minus the cost of the rare event 'the average is m'. "
+                         f"φ(m) = βm²/2 + βhm − I(m): energy gain minus the cost I(m) of the rare event "
+                         f"'the average is m' (I is a [[large-deviations|large-deviation rate]]). "
                          f"The free energy is log 2 + max φ. <span style='color:{theme.ACCENT_2}'>│</span> where the "
                          "simulation is now.")
         landscape.add(self.plot_l)
         landscape.add(Deeper(
-            "Group the 2<sup>N</sup> configurations by their magnetisation: about 2<sup>N</sup>e<sup>−N I(m)</sup> of them have "
-            "average m (Cramér), each with weight e<sup>Nβm²/2 + Nβhm</sup>. The sum is dominated by the best m "
-            "(Laplace), so (1/N) log Z → log 2 + sup<sub>m</sub> φ(m). The maximiser solves m = tanh(β(m + h)). "
+            "Group the 2<sup>N</sup> configurations by their magnetisation. About 2<sup>N</sup>e<sup>−N I(m)</sup> of them have "
+            "average m (Cramér's theorem, see [[large-deviations|large deviations]]), each with Gibbs weight "
+            "e<sup>Nβm²/2 + Nβhm</sup>. A sum of terms e<sup>N·(something)</sup> is dominated, on the log scale, by its "
+            "largest term (the <i>Laplace principle</i>), so (1/N) log Z → log 2 + sup<sub>m</sub> φ(m). The maximiser solves m = tanh(β(m + h)). "
             "For h = 0 the maximum moves away from 0 when β &gt; 1. It is a <b>supremum</b> because the energy "
             "−Nm²/2 is a convex function of m: see [[legendre|Legendre duality]]. Open the [[curie-weiss]] entry "
             "for the formulas."))
 
-        self.beta = LabeledSlider("Inverse temperature β", 0.0, 2.5, 1.4, 250, hint="β = 1 is the critical point (at h = 0).")
+        self.beta = LabeledSlider("Inverse temperature β = 1/T", 0.0, 2.5, 1.4, 250, hint="β = 1 is the critical point (at h = 0).")
         self.h = LabeledSlider("External field h", -0.3, 0.3, 0.0, 120, fmt=lambda v: f"{v:+.3f}",
                                hint="A common push in one direction.")
         buttons = QWidget(); bl = QHBoxLayout(buttons); bl.setContentsMargins(0, 4, 0, 0)
@@ -186,7 +189,7 @@ class CapacityPage(QWidget):
         lay.addWidget(label(
             "Store more and more random memories, P = αN, and ask whether each one can still be recalled. As α grows, "
             "the cross-talk between memories acts like random couplings and the network turns into a "
-            "[[spin-glass|spin glass]], close cousin of the [[sk|SK model]]: recall breaks down near the "
+            "[[spin-glass|spin glass]], close cousin of the Sherrington–Kirkpatrick ([[sk|SK]]) model: recall breaks down near the "
             "[[capacity|storage capacity]] α<sub>c</sub> ≈ 0.138.", "body"))
 
         self.plot = pg.PlotWidget(); theme.style_plot(self.plot.getPlotItem(), "load α = P / N", "overlap after recall")
@@ -206,20 +209,21 @@ class CapacityPage(QWidget):
         known.add(label(
             "<b>Few memories</b> (P fixed, or P/N → 0): solved rigorously. The free energy is a supremum over the "
             "[[overlap|overlaps]], a P-dimensional [[curie-weiss|Curie–Weiss]] formula.<br><br>"
-            "<b>Many memories, high temperature or small α</b>: the replica-symmetric free energy is proved "
-            "(Talagrand; Shcherbina and Tirozzi; and later work).<br><br>"
+            "<b>Many memories, high temperature or small α</b>: the [[replica-symmetry|replica-symmetric]] free energy "
+            "is proved (Talagrand; Shcherbina and Tirozzi; and later work).<br><br>"
             "<b>Many memories, low temperature</b>, which is where recall lives: <b>open</b>. Physics has the "
-            "replica-symmetric solution of Amit, Gutfreund and Sompolinsky (α<sub>c</sub> ≈ 0.138) and "
-            "[[rsb|replica-symmetry-breaking]] corrections (Steffan and Kühn: α<sub>c</sub> ≈ 0.13819); Agliari, "
-            "Albanese, Barra and Ottaviani derive broken-replica free energies by interpolation under an ansatz. "
+            "replica-symmetric solution of Amit, Gutfreund and Sompolinsky (AGS, α<sub>c</sub> ≈ 0.138) and "
+            "[[rsb|replica-symmetry-breaking]] corrections (Steffan and Kühn: α<sub>c</sub> ≈ 0.13819). Agliari, "
+            "Albanese, Barra and Ottaviani derive broken-replica free energies by [[interpolation|Guerra's interpolation]], "
+            "under an <i>ansatz</i>: an assumed form of the solution that is not itself proved. "
             "A full proof, an analogue of the [[parisi|Parisi formula]] for the Hopfield model, is not available.",
             "body"))
 
         practice = Practice("How many memories fit in N neurons?", rows=[
             ("Classical", "Hebbian Hopfield network, pairwise couplings: about 0.138·N random memories. "
                           "This is the AGS value (Amit, Gutfreund, Sompolinsky, 1985), the curve on the left."),
-            ("Dense", "Dense associative memories (Krotov and Hopfield, 2016) replace m² in the energy by mⁿ, "
-                      "interactions among n neurons at a time: capacity grows like Nⁿ⁻¹."),
+            ("Dense", "Dense associative memories (Krotov and Hopfield, 2016) replace m<sub>μ</sub>² in the energy by "
+                      "m<sub>μ</sub><sup>p</sup>, interactions among p neurons at a time: capacity grows like N<sup>p−1</sup>."),
             ("Modern", "With an exponential interaction the capacity becomes exponential in N (Demircigil et al., "
                        "2017). The continuous version (Ramsauer et al., 2020) retrieves in one step, and that step is "
                        "a transformer's attention."),
@@ -268,7 +272,7 @@ class REMSection(Section):
         super().__init__(
             "4", "REM: extreme disorder",
             "At the other end of the scale: forget the couplings and give every configuration its own independent "
-            "random energy. Derrida's [[rem|Random Energy Model]] is the simplest [[spin-glass|spin glass]]. It "
+            "random energy. Derrida's Random Energy Model ([[rem|REM]]) is the simplest [[spin-glass|spin glass]]. It "
             "<b>freezes</b>, and the reason is a budget: there are only 2<sup>N</sup> configurations, so the "
             "[[entropy]] cannot exceed log 2 per spin.")
         self.lay.addWidget(REMPage(), 1)
