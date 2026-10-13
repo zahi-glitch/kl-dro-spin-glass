@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QPushButton, QStackedWi
 
 from .. import spinglass as sg
 from . import theme
-from .widgets import Card, Deeper, LabeledSlider, OverlapBars, Segmented, SpinGrid, label
+from .widgets import Card, Deeper, LabeledSlider, OverlapBars, Practice, Segmented, SpinGrid, label
 
 
 def _two_columns(left: QWidget, right: QWidget) -> QWidget:
@@ -59,8 +59,9 @@ class HopfieldPage(QWidget):
                                   hint="T = 0: always go downhill. Large T: random flips, memories melt.")
         buttons = QWidget(); bl = QHBoxLayout(buttons); bl.setContentsMargins(0, 4, 0, 0)
         self.corrupt_btn = QPushButton("Corrupt")
+        self.half_btn = QPushButton("Half unknown")
         self.run_btn = QPushButton("Recall  ▶"); self.run_btn.setObjectName("primary")
-        bl.addWidget(self.corrupt_btn); bl.addWidget(self.run_btn); bl.addStretch(1)
+        bl.addWidget(self.corrupt_btn); bl.addWidget(self.half_btn); bl.addWidget(self.run_btn); bl.addStretch(1)
         controls = Card("Controls"); controls.add(self.noise); controls.add(self.temp); controls.add(buttons)
 
         self.bars = OverlapBars(sg.PATTERN_NAMES)
@@ -76,11 +77,20 @@ class HopfieldPage(QWidget):
             "Here N = 256 and 3 memories; recall survives up to about 0.138·N random memories "
             "(Amit, Gutfreund, Sompolinsky). Chapter 3: this network is a restricted Boltzmann machine in disguise."))
 
-        self.layout_ = _two_columns(_column(state), _column(memories, controls, overlaps))
+        practice = Practice(
+            "Search by content, not by address",
+            "Press <b>Half unknown</b>: the bottom half becomes random static, and the network still returns the "
+            "whole symbol. That is a <b>content-addressable memory</b>: you retrieve a complete item from a fragment "
+            "or a noisy copy, like completing a half-remembered phone number or cleaning a damaged scan of a code. "
+            "The same idea lives on in machine learning: the update rule of modern Hopfield networks is the "
+            "<b>attention</b> mechanism of transformers (Ramsauer et al., 2020), where the query is the noisy pattern "
+            "and the keys are the stored memories.")
+        self.layout_ = _two_columns(_column(state, practice), _column(memories, controls, overlaps))
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.addWidget(self.layout_)
 
         self.timer = QTimer(self); self.timer.setInterval(1000 // self.FPS); self.timer.timeout.connect(self.tick)
         self.corrupt_btn.clicked.connect(self.corrupt)
+        self.half_btn.clicked.connect(self.half_unknown)
         self.run_btn.clicked.connect(self.toggle)
         self.choose(0)
 
@@ -93,6 +103,15 @@ class HopfieldPage(QWidget):
     def corrupt(self):
         self.stop()
         self.s = self.net.corrupt(self.target, self.noise.value(), self.rng)
+        self.sweeps = 0.0
+        self.refresh()
+
+    def half_unknown(self):
+        """Keep the top half of the chosen memory; replace the bottom half by random static."""
+        self.stop()
+        self.s = sg.PATTERNS[self.target].copy()
+        half = self.net.N // 2
+        self.s[half:] = self.rng.choice([-1.0, 1.0], self.net.N - half)
         self.sweeps = 0.0
         self.refresh()
 
@@ -178,8 +197,18 @@ class SKPage(QWidget):
             "(Guerra; Talagrand). The minimum energy per spin tends to −0.7633. With N = 256 the run here is a small, "
             "honest finite-size picture, not the limit."))
 
+        self.practice_readout = label("", "body")
+        practice = Practice(
+            "Many good answers that look nothing alike",
+            "Minimising this energy is a <b>Max-Cut</b> problem: split 256 nodes into two groups so that the "
+            "total weight of the links you cut (with weights −J<sub>ij</sub>) is as large as possible. Problems of "
+            "this kind (scheduling, chip layout, portfolio selection with pairwise interactions) are routinely "
+            "written as Ising energies, and Ising machines and quantum annealers are built to minimise them. "
+            "The glass teaches the key practical lesson: there are many near-optimal solutions that are "
+            "<b>very different</b> from each other.")
+        practice.add(self.practice_readout)
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0)
-        lay.addWidget(_two_columns(_column(replicas, traces), _column(controls, explain)))
+        lay.addWidget(_two_columns(_column(replicas, traces), _column(controls, explain, practice)))
 
         self.timer = QTimer(self); self.timer.setInterval(1000 // self.FPS); self.timer.timeout.connect(self.tick)
         self.run_btn.clicked.connect(self.restart)
@@ -216,6 +245,12 @@ class SKPage(QWidget):
         self.ga.set_state(self.a); self.gb.set_state(self.b)
         self.ea.setData(h["t"], h["ea"]); self.eb.setData(h["t"], h["eb"]); self.qline.setData(h["t"], h["q"])
         self.readout.setText(f"Now: energy per spin {ea:+.3f} and {eb:+.3f} · overlap q = {q:+.2f}")
+        if hasattr(self, "practice_readout"):
+            agree = (1 + abs(q)) / 2
+            gap = abs(ea - eb) / max(abs(ea), abs(eb), 1e-9)
+            self.practice_readout.setText(
+                f"Right now the two partitions differ in quality by <b>{gap:.1%}</b>, yet they put only "
+                f"<b>{agree:.0%}</b> of the nodes on the same side (50% would be unrelated).")
 
     def hideEvent(self, e):
         self.timer.stop(); super().hideEvent(e)
@@ -246,9 +281,9 @@ class REMPage(QWidget):
         self.plot_s.plot(self.betas, [sg.REM.entropy_theory(b) for b in self.betas], pen=pg.mkPen(theme.INK_3, width=2))
         self.curve_s = self.plot_s.plot(pen=pg.mkPen(theme.ACCENT, width=2))
         self.plot_s.addItem(pg.InfiniteLine(pos=np.log(2), angle=0, pen=pg.mkPen(theme.BORDER),
-                                            label="log 2: all 2ᴺ states equally likely", labelOpts={"color": theme.INK_3, "position": 0.62}))
+                                            label="log 2: all 2ᴺ states equally likely", labelOpts={"color": theme.INK_3, "position": 0.78}))
         self.plot_s.addItem(pg.InfiniteLine(pos=sg.REM.beta_c, angle=90, pen=pg.mkPen(theme.INK_3),
-                                            label="β_c = √(2 log 2)", labelOpts={"color": theme.INK_3, "position": 0.9}))
+                                            label="β_c = √(2 log 2)", labelOpts={"color": theme.INK_3, "position": 0.6}))
         self.marker = pg.ScatterPlotItem(size=11, brush=theme.ACCENT, pen=pg.mkPen("white", width=2))
         self.plot_s.addItem(self.marker)
         entropy = Card("Entropy runs out", f"<span style='color:{theme.ACCENT}'>━</span> this sample (N = 16) &nbsp; "
@@ -281,8 +316,17 @@ class REMPage(QWidget):
             "Poisson–Dirichlet point process with parameter m = β<sub>c</sub>/β: the 1-step replica-symmetry-breaking picture, "
             "and the same m as in the Parisi formula."))
 
+        self.tokens = label("", "body")
+        practice = Practice(
+            "Temperature when a language model picks the next word",
+            "A language model chooses the next token with a softmax over a vocabulary of tens of thousands of "
+            "tokens: probability ∝ e<sup>logit/T</sup>. Read the 65,536 states here as a vocabulary and the "
+            "random energies as (minus) logits, a deliberately crude toy. The <b>effective number of states</b> "
+            "is then the number of tokens really in play. Lowering the temperature makes the choice collapse "
+            "onto a handful of tokens: the sampler <b>freezes</b> and becomes almost deterministic.")
+        practice.add(self.tokens)
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0)
-        lay.addWidget(_two_columns(_column(weights, entropy), _column(controls, stats, explain)))
+        lay.addWidget(_two_columns(_column(weights, entropy), _column(controls, stats, practice, explain)))
         self.beta.changed.connect(lambda _: self.refresh())
         self.new_btn.clicked.connect(self.new_sample)
         self.new_sample(first=True)
@@ -302,6 +346,8 @@ class REMPage(QWidget):
         self.marker.setData([b], [s])
         self.k_states.setText(f"{self.rem.effective_states(b):,.0f}")
         self.k_entropy.setText(f"{s / np.log(2):.0%}")
+        self.tokens.setText(f"At β = {b:.2f} (temperature {1 / b:.2f}): about <b>{self.rem.effective_states(b):,.0f}</b> "
+                            f"of 65,536 tokens in play." if b > 0 else "At infinite temperature every token is equally likely.")
         if b < sg.REM.beta_c:
             self.phase.setText(f"β below β<sub>c</sub>: the probability is spread over exponentially many states (high temperature).")
         else:

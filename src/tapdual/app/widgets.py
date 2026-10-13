@@ -35,6 +35,18 @@ class Card(QFrame):
         return w
 
 
+class Practice(Card):
+    """'In practice' card: a concrete use of the idea on the page."""
+
+    def __init__(self, title: str, body: str = ""):
+        super().__init__()
+        self.setObjectName("practice")
+        self.lay.addWidget(label("IN PRACTICE", "tag"))
+        self.lay.addWidget(label(title, "h2"))
+        if body:
+            self.lay.addWidget(label(body, "body"))
+
+
 class SpinGrid(QWidget):
     """A square grid of +-1 spins, painted as crisp cells."""
     clicked = Signal()

@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
 from . import theme
 from .chapter1 import _column, _two_columns
-from .widgets import Card, Deeper, LabeledSlider, label
+from .widgets import Card, Deeper, LabeledSlider, Practice, label
 
 from ..spinglass import ENERGIES, boltzmann, log_Z, terms
 
@@ -91,7 +91,15 @@ class Chapter2(QWidget):
             "with μ uniform: a <b>KL-penalised worst case</b> over distributions. That is the form the rest of the story uses, "
             "with the penalty becoming a budget in chapter 4."))
 
-        lay.addWidget(_two_columns(_column(dists, objective), _column(controls, nums, ml)), 1)
+        self.reco = label("", "body")
+        practice = Practice(
+            "How much exposure each product gets",
+            "Read the ten states as ten products in a recommender, with relevance scores s = −E. Showing "
+            "product i with probability ∝ e<sup>β s<sub>i</sub></sup> is exactly the Gibbs distribution: β trades "
+            "<b>relevance</b> (energy) against <b>variety</b> (entropy). β = 0 shows everything equally; large β "
+            "shows only the top product and never learns about the others.")
+        practice.add(self.reco)
+        lay.addWidget(_two_columns(_column(dists, objective), _column(controls, nums, practice, ml)), 1)
         self.beta.changed.connect(lambda _: self.refresh())
         self.t.changed.connect(lambda _: self.refresh())
         self.refresh()
@@ -110,3 +118,7 @@ class Chapter2(QWidget):
         lo = min(curves.min(), 0) - 0.2
         self.plot_o.setYRange(lo, max(curves.max(), lz) + 0.3)
         self.v_obj.setText(f"{val:.3f}"); self.v_logz.setText(f"{lz:.3f}"); self.v_kl.setText(f"{lz - val:.3f}")
+        top = np.sort(p)[::-1]
+        smooth = f" The free energy divided by β, (1/β) log Z = <b>{lz / beta:.2f}</b>, is a <i>smooth maximum</i> of the scores (the hard maximum is {-ENERGIES.min():.2f}); ML uses this log-sum-exp wherever it needs a differentiable max." if beta > 0.05 else ""
+        self.reco.setText(f"At β = {beta:.2f}: the top product gets <b>{top[0]:.0%}</b> of the exposure, the top three "
+                          f"<b>{top[:3].sum():.0%}</b>.{smooth}")
