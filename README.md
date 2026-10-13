@@ -14,6 +14,29 @@ KL-constrained DRO meets spin glasses: in REM-type approximations of TAP free en
 4. The dictionary: Parisi parameters as Lagrange multipliers.
 5. Numerical primal-dual check and the phase transition.
 
+## Dashboard
+
+`docs/index.html` is an interactive dashboard, computed live in the browser by
+`docs/solver.js`, a JavaScript port of the Python package.
+
+- **Panel 1: the KL budget as a robustness radius.** Sliders for β, h and the
+  budget ρ; the worst-case distribution against the Gaussian, the Parisi function
+  along the KKT path, and complementary slackness (m* = 1 or H = ρ).
+- Panels 2 and 3 (convex reparametrisation, phase diagram): coming next.
+
+Open `docs/index.html` in a browser (double-click works, no server needed).
+`python scripts/check_dashboard.py` checks the JavaScript solver against the
+Python package (requires Node.js).
+
+## Python package
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[test]"
+pytest
+python -m tapdual --beta 5 --h 0.5
+```
+
 ## Papers
 
 - N. Kistler, M. A. Schmidt, G. Sebastiani, *On the REM approximation of TAP free
