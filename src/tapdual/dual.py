@@ -87,7 +87,7 @@ class DualSolution:
     phase: str          # "high" (budget slack, m* = 1) or "low" (binding)
 
 
-def solve_dual(model: Model, rho: float = LOG2, n_nodes: int = 300,
+def solve_dual(model: Model, rho: float = LOG2, n_points: int = 2801,
                m_min: float = 1e-6) -> DualSolution:
     """Minimise the Parisi function via its KKT conditions.
 
@@ -95,7 +95,7 @@ def solve_dual(model: Model, rho: float = LOG2, n_nodes: int = 300,
     m decreases, so either H <= rho at m = 1 (high temperature) or there is
     a unique m* < 1 with H(nu^{q*(m*), m*}) = rho (low temperature).
     """
-    quad = Quadrature(model, n_nodes)
+    quad = Quadrature(model, n_points)
 
     def entropy_gap(m: float) -> float:
         q = fixed_point_q(quad, m)

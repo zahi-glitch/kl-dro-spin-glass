@@ -37,9 +37,9 @@ class PrimalSolution:
     nu: Tilt
 
 
-def solve_primal(model: Model, rho: float = LOG2, n_nodes: int = 300,
+def solve_primal(model: Model, rho: float = LOG2, n_points: int = 2801,
                  starts=None) -> PrimalSolution:
-    quad = Quadrature(model, n_nodes)
+    quad = Quadrature(model, n_points)
 
     def evaluate(t):
         nu = quad.tilt(t[0], t[1])
