@@ -5,179 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KL Budget Dashboard</title>
 <meta name="description" content="KL-constrained DRO meets spin glasses: the Parisi formula of the REM approximation of the SK TAP free energy as the dual of a KL-constrained sup, computed live.">
-<style>
-:root {
-  color-scheme: light;
-  --surface-0: #f6f5f2;
-  --surface-1: #fcfcfb;
-  --border: #e4e2dc;
-  --grid: #ebe9e4;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #7a7974;
-  --series-1: #2a78d6;
-  --series-1-wash: rgba(42, 120, 214, 0.10);
-  --nominal: #8f8e88;
-  --accent-soft: #e6effb;
-  --chip-low-bg: #ece9fb;
-  --chip-low-ink: #3b2fa0;
-  --chip-high-bg: #e6f3ee;
-  --chip-high-ink: #0f6b4a;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --surface-0: #121211;
-    --surface-1: #1a1a19;
-    --border: #2f2f2c;
-    --grid: #2a2a27;
-    --text-primary: #f0efec;
-    --text-secondary: #c3c2b7;
-    --text-muted: #94938b;
-    --series-1: #3987e5;
-    --series-1-wash: rgba(57, 135, 229, 0.14);
-    --nominal: #8a8984;
-    --accent-soft: #1d2a3b;
-    --chip-low-bg: #2a2550;
-    --chip-low-ink: #c9c2ff;
-    --chip-high-bg: #173328;
-    --chip-high-ink: #9be0c3;
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --surface-0: #121211;
-  --surface-1: #1a1a19;
-  --border: #2f2f2c;
-  --grid: #2a2a27;
-  --text-primary: #f0efec;
-  --text-secondary: #c3c2b7;
-  --text-muted: #94938b;
-  --series-1: #3987e5;
-  --series-1-wash: rgba(57, 135, 229, 0.14);
-  --nominal: #8a8984;
-  --accent-soft: #1d2a3b;
-  --chip-low-bg: #2a2550;
-  --chip-low-ink: #c9c2ff;
-  --chip-high-bg: #173328;
-  --chip-high-ink: #9be0c3;
-}
-* { box-sizing: border-box; }
-html, body { margin: 0; }
-body {
-  background: var(--surface-0);
-  color: var(--text-primary);
-  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
-.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 48px; }
-header h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
-header p { margin: 0; color: var(--text-secondary); max-width: 760px; }
-.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 6px; }
-.card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px;
-}
-.controls {
-  margin-top: 20px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px 28px;
-}
-.control label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 600; font-size: 14px; }
-.control label output { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-primary); }
-.control .hint { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
-.slider-wrap { position: relative; margin-top: 8px; margin-bottom: 14px; }
-input[type="range"] { width: 100%; margin: 0; accent-color: var(--series-1); height: 24px; }
-.tick {
-  position: absolute; top: -6px; width: 0; height: 0;
-  pointer-events: none;
-}
-.tick::before {
-  content: ""; position: absolute; left: -1px; top: 4px; width: 2px; height: 10px;
-  background: var(--text-secondary); border-radius: 1px;
-}
-.tick span {
-  position: absolute; top: 24px; transform: translateX(-50%);
-  font-size: 11px; color: var(--text-secondary); white-space: nowrap;
-}
-.btn {
-  font: inherit; font-size: 12.5px; border: 1px solid var(--border); background: var(--surface-0);
-  color: var(--text-secondary); border-radius: 999px; padding: 2px 10px; cursor: pointer; margin-top: 6px;
-}
-.btn:hover { color: var(--text-primary); }
-.kpis {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: 1.5fr repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-.kpi .label { font-size: 13px; color: var(--text-secondary); }
-.kpi .value { font-size: 26px; font-weight: 600; line-height: 1.2; margin-top: 4px; }
-.kpi .sub { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
-.hero .value { font-size: 44px; letter-spacing: -0.01em; }
-.chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 600; border-radius: 999px; padding: 3px 10px; margin-top: 8px;
-}
-.chip.high { background: var(--chip-high-bg); color: var(--chip-high-ink); }
-.chip.low { background: var(--chip-low-bg); color: var(--chip-low-ink); }
-.meter { margin-top: 10px; height: 8px; border-radius: 4px; background: var(--accent-soft); overflow: hidden; }
-.meter > div { height: 100%; background: var(--series-1); border-radius: 4px; transition: width 120ms; }
-.grid2 {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-.stack { display: grid; gap: 14px; }
-.card h2 { font-size: 16px; margin: 0 0 2px; }
-.card .desc { font-size: 13.5px; color: var(--text-secondary); margin: 0 0 10px; }
-.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
-.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; border-radius: 1px; }
-.chart { position: relative; width: 100%; }
-.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
-.chart text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.chart .axis-title { fill: var(--text-secondary); font-size: 12px; }
-.chart .annot { fill: var(--text-secondary); font-size: 11.5px; }
-.tooltip {
-  position: absolute; pointer-events: none; z-index: 2;
-  background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
-  padding: 6px 9px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);
-  white-space: nowrap; display: none;
-}
-.tooltip .row { display: flex; align-items: center; gap: 8px; }
-.tooltip .row b { font-variant-numeric: tabular-nums; }
-.tooltip .row span { color: var(--text-secondary); }
-.tooltip .key { width: 12px; height: 0; border-top: 2px solid; display: inline-block; }
-.tooltip .head { color: var(--text-muted); margin-bottom: 2px; }
-.explain p { margin: 0 0 10px; }
-.explain p:last-child { margin-bottom: 0; }
-.explain .now { font-size: 15px; }
-table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
-th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--grid); vertical-align: top; }
-th { font-weight: 600; color: var(--text-secondary); font-size: 12.5px; }
-td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
-details { margin-top: 14px; }
-summary { cursor: pointer; color: var(--text-secondary); font-size: 14px; }
-footer { margin-top: 26px; font-size: 13px; color: var(--text-muted); }
-footer a { color: var(--text-secondary); }
-code, .math { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
-.computing { opacity: 0.55; transition: opacity 80ms; }
-@media (max-width: 900px) {
-  .controls { grid-template-columns: 1fr; }
-  .kpis { grid-template-columns: 1fr 1fr; }
-  .hero { grid-column: 1 / -1; }
-  .grid2 { grid-template-columns: 1fr; }
-}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
+  <nav class="nav" aria-label="Pages"><a href="index.html" aria-current="page">1 · KL budget (spin glass)</a><a href="mean-variance.html">Robust mean–variance on data</a></nav>
   <header>
-    <div class="eyebrow">Panel 1 of 3 · KL-constrained DRO meets spin glasses</div>
+    <div class="eyebrow">Spin-glass model · KL-constrained DRO meets spin glasses</div>
     <h1>The KL budget as a robustness radius</h1>
     <p>An adversary picks a distribution ν of single-site fields, as far from the Gaussian μ as a KL budget
       <span class="math">H(ν | μ) ≤ ρ</span> allows, to maximise
@@ -298,113 +132,12 @@ code, .math { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-
 </div>
 
 <script src="solver.js"></script>
+<script src="charts.js"></script>
 <script>
 "use strict";
 const { skModel, solve, dualPath, criticalBeta, density, LOG2 } = window.TapDual;
 
-const $ = (id) => document.getElementById(id);
-const fmt = (v, d = 4) => Number.isFinite(v) ? v.toFixed(d) : "–";
-const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const SVGNS = "http://www.w3.org/2000/svg";
-const el = (tag, attrs = {}, parent) => {
-  const n = document.createElementNS(SVGNS, tag);
-  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
-  if (parent) parent.appendChild(n);
-  return n;
-};
-
-function niceTicks(lo, hi, n = 5) {
-  const span = hi - lo || 1, step0 = span / n, mag = 10 ** Math.floor(Math.log10(step0));
-  const step = [1, 2, 2.5, 5, 10].map((s) => s * mag).find((s) => span / s <= n) || 10 * mag;
-  const ticks = [];
-  for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) ticks.push(+t.toFixed(10));
-  return ticks;
-}
-
-/** Minimal line chart: series share one x grid; one y axis; hover crosshair. */
-function lineChart(container, { xs, series, xLabel, yLabel, yDomain, hlines = [], points = [], xFmt = (v) => v.toFixed(2), yFmt = (v) => v.toFixed(3) }) {
-  container.textContent = "";
-  const W = Math.max(320, container.clientWidth || 600), H = Math.round(Math.min(300, Math.max(200, W * 0.5)));
-  const m = { l: 60, r: 14, t: 14, b: 38 };
-  const x0 = xs[0], x1 = xs[xs.length - 1];
-  let [y0, y1] = yDomain || (() => {
-    let lo = Infinity, hi = -Infinity;
-    for (const s of series) for (const v of s.ys) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
-    for (const h of hlines) { lo = Math.min(lo, h.y); hi = Math.max(hi, h.y); }
-    const pad = (hi - lo) * 0.08 || 0.1;
-    return [lo - pad, hi + pad];
-  })();
-  const sx = (x) => m.l + ((x - x0) / (x1 - x0)) * (W - m.l - m.r);
-  const sy = (y) => H - m.b - ((y - y0) / (y1 - y0)) * (H - m.t - m.b);
-  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, container);
-  const grid = el("g", {}, svg);
-  for (const t of niceTicks(y0, y1, 4)) {
-    el("line", { x1: m.l, x2: W - m.r, y1: sy(t), y2: sy(t), stroke: css("--grid"), "stroke-width": 1 }, grid);
-    const tx = el("text", { x: m.l - 6, y: sy(t) + 3.5, "text-anchor": "end" }, grid); tx.textContent = yFmt(t);
-  }
-  for (const t of niceTicks(x0, x1, 6)) {
-    const tx = el("text", { x: sx(t), y: H - m.b + 15, "text-anchor": "middle" }, grid); tx.textContent = xFmt(t);
-  }
-  el("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: css("--border"), "stroke-width": 1 }, grid);
-  const xt = el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle", class: "axis-title" }, svg); xt.textContent = xLabel;
-  const yt = el("text", { x: 12, y: (m.t + H - m.b) / 2, "text-anchor": "middle", class: "axis-title", transform: `rotate(-90 12 ${(m.t + H - m.b) / 2})` }, svg); yt.textContent = yLabel;
-
-  for (const h of hlines) {
-    el("line", { x1: m.l, x2: W - m.r, y1: sy(h.y), y2: sy(h.y), stroke: css("--text-muted"), "stroke-width": 1 }, svg);
-    // put the label on the side away from the highlighted point; shorten on narrow charts
-    const px = points.length ? sx(points[0].x) : W;
-    const onLeft = px > (m.l + W - m.r) / 2;
-    const t = el("text", { x: onLeft ? m.l + 6 : W - m.r - 4, y: sy(h.y) - 5, "text-anchor": onLeft ? "start" : "end", class: "annot" }, svg);
-    t.textContent = W < 520 && h.short ? h.short : h.label;
-  }
-  for (const s of series) {
-    // points outside the y-domain are not drawn (no flat clipped segments)
-    let d = "", pen = false;
-    xs.forEach((x, i) => {
-      const v = s.ys[i];
-      if (!Number.isFinite(v) || v > y1 || v < y0) { pen = false; return; }
-      d += `${pen ? "L" : "M"}${sx(x).toFixed(1)},${sy(v).toFixed(1)}`; pen = true;
-    });
-    if (s.area) el("path", { d: `${d}L${sx(x1)},${sy(Math.max(y0, 0))}L${sx(x0)},${sy(Math.max(y0, 0))}Z`, fill: css(s.wash) }, svg);
-    el("path", { d, fill: "none", stroke: css(s.color), "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
-  }
-  for (const p of points) {
-    el("circle", { cx: sx(p.x), cy: sy(p.y), r: 5, fill: css(p.color), stroke: css("--surface-1"), "stroke-width": 2 }, svg);
-    const right = sx(p.x) > W - 110;
-    const t = el("text", { x: sx(p.x) + (right ? -2 : 0), y: sy(p.y) - 12, "text-anchor": right ? "end" : "middle", class: "annot" }, svg);
-    t.textContent = p.label;
-  }
-
-  // hover layer: crosshair + one tooltip listing every series
-  const cross = el("line", { y1: m.t, y2: H - m.b, stroke: css("--text-muted"), "stroke-width": 1, visibility: "hidden" }, svg);
-  const tip = document.createElement("div"); tip.className = "tooltip"; container.appendChild(tip);
-  const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent", tabindex: 0 }, svg);
-  const show = (clientX) => {
-    const r = svg.getBoundingClientRect(), scale = W / r.width;
-    const px = (clientX - r.left) * scale;
-    const xv = x0 + ((px - m.l) / (W - m.l - m.r)) * (x1 - x0);
-    let i = 0, best = Infinity;
-    xs.forEach((x, k) => { const dd = Math.abs(x - xv); if (dd < best) { best = dd; i = k; } });
-    cross.setAttribute("x1", sx(xs[i])); cross.setAttribute("x2", sx(xs[i])); cross.setAttribute("visibility", "visible");
-    tip.textContent = "";
-    const head = document.createElement("div"); head.className = "head"; head.textContent = `${xLabel.split(" ")[0]} = ${xFmt(xs[i])}`; tip.appendChild(head);
-    for (const s of series) {
-      const row = document.createElement("div"); row.className = "row";
-      const key = document.createElement("i"); key.className = "key"; key.style.borderColor = css(s.color);
-      const b = document.createElement("b"); b.textContent = yFmt(s.ys[i]);
-      const sp = document.createElement("span"); sp.textContent = s.name;
-      row.append(key, b, sp); tip.appendChild(row);
-    }
-    tip.style.display = "block";
-    const left = sx(xs[i]) / scale;
-    tip.style.left = `${Math.min(left + 12, r.width - tip.offsetWidth - 4)}px`;
-    tip.style.top = `${m.t / scale}px`;
-  };
-  hit.addEventListener("pointermove", (e) => show(e.clientX));
-  hit.addEventListener("pointerleave", () => { tip.style.display = "none"; cross.setAttribute("visibility", "hidden"); });
-  hit.addEventListener("focus", () => { const r = svg.getBoundingClientRect(); show(r.left + r.width / 2); });
-  hit.addEventListener("blur", () => { tip.style.display = "none"; cross.setAttribute("visibility", "hidden"); });
-}
+const { $, fmt, lineChart, tickFmt, gapText } = window.Charts;
 
 const state = { beta: 4, h: 0, rho: LOG2, bcKey: "", bc: NaN };
 const XS = Array.from({ length: 241 }, (_, i) => -6 + i * 0.05);
@@ -439,7 +172,7 @@ function render(r) {
   } else tick.style.display = "none";
 
   $("k-value").textContent = fmt(sol.dual, 4);
-  $("k-gap").textContent = `sup Ω(ν) = ${fmt(sol.primal, 6)} · inf P(q, m) = ${fmt(sol.dual, 6)} · gap ${Math.abs(sol.primal - sol.dual).toExponential(0)}`;
+  $("k-gap").textContent = `sup Ω(ν) = ${fmt(sol.primal, 6)} · inf P(q, m) = ${fmt(sol.dual, 6)} · gap ${gapText(sol.primal - sol.dual)}`;
   const chip = document.createElement("span");
   chip.className = `chip ${sol.phase}`;
   chip.textContent = sol.phase === "high" ? "○ High temperature · budget slack" : "● Low temperature · budget binding";
@@ -474,7 +207,7 @@ function render(r) {
       { name: "μ, nominal", ys: gaussian, color: "--nominal" },
     ],
     yDomain: [0, Math.max(...dens, ...gaussian) * 1.08],
-    xFmt: (v) => v.toFixed(0), yFmt: (v) => v.toFixed(2),
+    xFmt: tickFmt, yFmt: (v) => v.toFixed(2),
   });
 
   const Ps = path.map((p) => p.P), Hs = path.map((p) => p.H);
@@ -522,9 +255,7 @@ function schedule() {
 }
 for (const id of ["beta", "h", "rho"]) $(id).addEventListener("input", schedule);
 $("rho-reset").addEventListener("click", () => { $("rho").value = LOG2; schedule(); });
-let lastW = 0;
-new ResizeObserver((es) => { const w = Math.round(es[0].contentRect.width); if (w !== lastW) { lastW = w; if (last) render(last); } }).observe(document.querySelector(".wrap"));
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => last && render(last));
+window.Charts.onRelayout(document.querySelector(".wrap"), () => last && render(last));
 $("rho").value = LOG2;
 schedule();
 </script>

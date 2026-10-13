@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robust Mean–Variance</title>
+<meta name="description" content="Worst-case mean-variance risk over a KL ball around a dataset, solved through the same two-parameter Parisi-type dual as the spin-glass model.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" aria-label="Pages"><a href="index.html">1 · KL budget (spin glass)</a><a href="mean-variance.html" aria-current="page">Robust mean–variance on data</a></nav>
+  <header>
+    <div class="eyebrow">DRO example · the same duality on data</div>
+    <h1>Robust mean–variance on a dataset</h1>
+    <p>Take daily returns and the loss <span class="math">ℓ = −return</span>. An adversary reweights the days, staying within a KL ball
+      of radius ρ around the data, to maximise the mean–variance risk minus a KL penalty:
+      <span class="math">J = sup { E<sub>ν</sub>ℓ + γ Var<sub>ν</sub>ℓ − τ·KL(ν | data) : KL ≤ ρ }</span>.
+      Because <span class="math">Var = E ℓ² − (E ℓ)²</span> is concave in ν, this is exactly the problem of the spin-glass page,
+      and its dual has two parameters: q, the worst-case mean loss, and m, the Parisi parameter (the KL multiplier is τ/m).</p>
+  </header>
+
+  <section class="card controls" aria-label="Parameters">
+    <div class="control">
+      <label for="gamma">Risk aversion γ <output id="gamma-out"></output></label>
+      <div class="slider-wrap"><input id="gamma" type="range" min="0.1" max="3" step="0.05" value="1"></div>
+      <div class="hint">Weight of the variance in the risk E ℓ + γ Var ℓ.</div>
+    </div>
+    <div class="control">
+      <label for="tau">KL penalty τ <output id="tau-out"></output></label>
+      <div class="slider-wrap"><input id="tau" type="range" min="-1.7" max="1.3" step="0.01" value="-0.301"></div>
+      <div class="hint">Log scale. Small τ: close to pure KL-constrained DRO. Large τ: the penalty alone restrains the adversary.</div>
+    </div>
+    <div class="control">
+      <label for="rho">KL radius ρ <output id="rho-out"></output></label>
+      <div class="slider-wrap">
+        <input id="rho" type="range" min="0.005" max="1" step="0.005" value="0.1">
+        <div class="tick" id="rho-tick"><span>ρ<sub>c</sub></span></div>
+      </div>
+      <div class="hint">The robustness radius. Below the tick ρ<sub>c</sub> the budget binds (m* &lt; 1).</div>
+    </div>
+    <div class="control" style="grid-column: 1 / -1">
+      <label>Data <output id="data-out"></output></label>
+      <div class="file-row">
+        <input id="csv" type="file" accept=".csv,.txt,text/csv,text/plain" aria-label="Load a CSV of returns">
+        <button class="btn" id="use-sample" type="button" style="margin-top:0">Use the built-in sample</button>
+      </div>
+      <div class="hint" id="data-hint">Built-in: 756 synthetic fat-tailed daily returns (Student-t, 4 degrees of freedom). Load your own CSV: one return per line in %, first column; the file stays in your browser.</div>
+    </div>
+  </section>
+
+  <section class="kpis" aria-label="Results">
+    <div class="card kpi hero">
+      <div class="label">Robust objective J</div>
+      <div class="value" id="k-J">–</div>
+      <div class="sub" id="k-J-sub">–</div>
+      <div id="k-phase"></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Worst-case risk</div>
+      <div class="value" id="k-risk">–</div>
+      <div class="sub" id="k-risk-sub">–</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">KL used by ν*</div>
+      <div class="value" id="k-H">–</div>
+      <div class="meter" aria-hidden="true"><div id="k-meter" style="width:0"></div></div>
+      <div class="sub" id="k-H-sub">–</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Price of robustness dJ/dρ</div>
+      <div class="value" id="k-price">–</div>
+      <div class="sub" id="k-m">–</div>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="stack">
+      <div class="card">
+        <h2>How the adversary reweights the days</h2>
+        <p class="desc">Likelihood ratio n·ν*(day) against the loss of that day. Days above 1 are up-weighted.
+          The variance term makes the adversary push weight into <em>both</em> tails, big losses and big gains.</p>
+        <div class="chart" id="chart-lr"></div>
+      </div>
+      <div class="card">
+        <h2>Loss distribution: data vs worst case</h2>
+        <div class="legend"><span><i style="border-color:var(--series-1)"></i>worst case ν*</span><span><i style="border-color:var(--nominal)"></i>data (equal weights)</span></div>
+        <div class="chart" id="chart-hist"></div>
+      </div>
+      <div class="card explain">
+        <h2>What you are seeing</h2>
+        <p class="now" id="explain-now"></p>
+        <p id="explain-days"></p>
+        <p id="explain-sg"></p>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h2>The dual: minimise over m</h2>
+        <p class="desc">τ·P along the KKT path (q solves q = E<sub>ν</sub>[ℓ] for each m), on a log scale in m.
+          Its minimum is the robust objective J, found by a one-dimensional search instead of an n-dimensional one.</p>
+        <div class="chart" id="chart-dual"></div>
+      </div>
+      <div class="card">
+        <h2>Complementary slackness</h2>
+        <p class="desc">KL of the Gibbs reweighting ν<sup>q*(m),m</sup>. The optimum is where it crosses ρ, or m = 1 if it never does.</p>
+        <div class="chart" id="chart-H"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:14px">
+    <h2>Same mathematics as the spin-glass page</h2>
+    <table>
+      <thead><tr><th>Here (DRO on data)</th><th>Spin-glass page</th></tr></thead>
+      <tbody>
+        <tr><td>empirical measure of the data</td><td>Gaussian a priori measure μ</td></tr>
+        <tr><td>KL radius ρ</td><td>entropy budget ρ = Θ log 2</td></tr>
+        <tr><td>−γ(E ℓ)² / τ, the concave part of the variance</td><td>Φ(E φ²) = β²/4 (1 − q²)</td></tr>
+        <tr><td>worst-case mean loss q*</td><td>overlap q*</td></tr>
+        <tr><td>m*, with KL multiplier τ/m*</td><td>Parisi parameter m*</td></tr>
+        <tr><td>budget binding / slack</td><td>low / high temperature</td></tr>
+      </tbody>
+    </table>
+    <details>
+      <summary>Show all numbers for the current parameters</summary>
+      <table id="numbers" style="margin-top:8px"><tbody></tbody></table>
+    </details>
+  </section>
+
+  <footer>
+    Computed live in your browser by <code>docs/solver.js</code>, which matches the <code>tapdual</code> Python package
+    (<code>python -m tapdual mv</code>) to 1e-12. Built on Kistler, Schmidt, Sebastiani,
+    <a href="https://arxiv.org/abs/2212.11718">On the REM approximation of TAP free energies</a> (2023).
+  </footer>
+</div>
+
+<script src="sample_returns.js"></script>
+<script src="solver.js"></script>
+<script src="charts.js"></script>
+<script>
+"use strict";
+const { meanVarianceModel, solve, weights, dualPath, criticalRho } = window.TapDual;
+const { $, fmt, lineChart, onRelayout, fillTable, tickFmt, gapText } = window.Charts;
+
+const state = { returns: window.SAMPLE_RETURNS.slice(), source: "built-in sample", scaled: false };
+let last = null;
+
+function stats(a) {
+  const n = a.length, mean = a.reduce((s, v) => s + v, 0) / n;
+  const sd = Math.sqrt(a.reduce((s, v) => s + (v - mean) ** 2, 0) / n);
+  return { n, mean, sd, min: Math.min(...a), max: Math.max(...a) };
+}
+
+function compute() {
+  const gamma = +$("gamma").value, tau = 10 ** +$("tau").value, rho = +$("rho").value;
+  const losses = state.returns.map((r) => -r);
+  const model = meanVarianceModel(losses, gamma, tau);
+  const sol = solve(model, rho);
+  const w = weights(model, sol.q, sol.m);
+  const n = losses.length;
+  const wMean = w.reduce((s, v, i) => s + v * losses[i], 0);
+  const wVar = w.reduce((s, v, i) => s + v * (losses[i] - wMean) ** 2, 0);
+  const st = stats(losses);
+  // m grid: log-spaced from well below m* up to 1, so the minimum is always visible
+  const lo = Math.max(1e-5, Math.min(sol.m / 30, 0.01)), k = Math.log10(lo);
+  const ms = Array.from({ length: 80 }, (_, i) => 10 ** (k - (k * i) / 79));
+  return {
+    gamma, tau, rho, losses, sol, w, n,
+    J: tau * sol.dual, worstRisk: wMean + gamma * wVar, nominalRisk: st.mean + gamma * st.sd ** 2,
+    rhoC: criticalRho(model), ms, path: dualPath(model, rho, ms),
+  };
+}
+
+function histogram(losses, w, bins = 32) {
+  const lo = Math.min(...losses), hi = Math.max(...losses), width = (hi - lo) / bins || 1;
+  const centers = Array.from({ length: bins }, (_, k) => lo + (k + 0.5) * width);
+  const nom = new Array(bins).fill(0), wc = new Array(bins).fill(0);
+  losses.forEach((l, i) => {
+    const k = Math.min(bins - 1, Math.floor((l - lo) / width));
+    nom[k] += 1 / losses.length; wc[k] += w[i];
+  });
+  return { centers, nom, wc };
+}
+
+function render(r) {
+  last = r;
+  const { gamma, tau, rho, losses, sol, w, n } = r;
+  $("gamma-out").textContent = gamma.toFixed(2);
+  $("tau-out").textContent = tau < 1 ? tau.toFixed(3) : tau.toFixed(2);
+  $("rho-out").textContent = rho.toFixed(3);
+  const st = stats(state.returns);
+  $("data-out").textContent = `${st.n} returns · mean ${st.mean.toFixed(3)}% · sd ${st.sd.toFixed(2)}%`;
+
+  const rmin = +$("rho").min, rmax = +$("rho").max, tick = $("rho-tick");
+  if (r.rhoC >= rmin && r.rhoC <= rmax) {
+    const frac = (r.rhoC - rmin) / (rmax - rmin);
+    tick.style.display = "block"; tick.style.left = `calc(${frac * 100}% + ${(0.5 - frac) * 16}px)`;
+  } else tick.style.display = "none";
+
+  const binding = sol.phase === "low";
+  const price = tau * (1 / sol.m - 1);
+  $("k-J").textContent = fmt(r.J, 4);
+  $("k-J-sub").textContent = `worst-case risk ${fmt(r.worstRisk, 3)} − τ·KL ${fmt(tau * sol.nu.H, 3)} · primal−dual gap ${gapText(tau * (sol.primal - sol.dual))}`;
+  const chip = document.createElement("span");
+  chip.className = `chip ${binding ? "low" : "high"}`;
+  chip.textContent = binding ? "● Budget binding · low temperature" : "○ Budget slack · high temperature";
+  $("k-phase").replaceChildren(chip);
+  $("k-risk").textContent = fmt(r.worstRisk, 3);
+  $("k-risk-sub").textContent = `×${(r.worstRisk / r.nominalRisk).toFixed(2)} the nominal risk ${fmt(r.nominalRisk, 3)}`;
+  $("k-H").textContent = `${fmt(sol.nu.H, 3)} / ${fmt(rho, 3)}`;
+  $("k-meter").style.width = `${Math.min(100, (100 * sol.nu.H) / rho)}%`;
+  $("k-H-sub").textContent = `${Math.round((100 * sol.nu.H) / rho)}% of the radius, in nats`;
+  $("k-price").textContent = fmt(price, 3);
+  $("k-m").textContent = `m* = ${sol.m < 0.01 ? sol.m.toExponential(2) : fmt(sol.m, 4)} · KL multiplier τ/m* = ${fmt(tau / sol.m, 3)}`;
+
+  // explanations
+  $("explain-now").textContent = binding
+    ? `The KL budget binds: the adversary uses all ρ = ${fmt(rho, 3)} nats, and the worst-case risk is ${(r.worstRisk / r.nominalRisk).toFixed(2)} times the nominal one. ` +
+      `Its multiplier is the price of robustness: one more nat of radius would raise J by about ${fmt(price, 3)}.`
+    : `The budget is slack: the KL penalty τ = ${tau.toFixed(3)} alone keeps the adversary at KL = ${fmt(sol.nu.H, 3)} < ρ (ρ_c = ${fmt(r.rhoC, 3)}). ` +
+      `The constraint is inactive, m* = 1, and a larger radius would change nothing (price 0).`;
+  const order = Array.from(w.keys()).sort((a, b) => w[b] - w[a]).slice(0, 4);
+  $("explain-days").textContent = "Most up-weighted days: " + order.map((i) =>
+    `${(-losses[i] >= 0 ? "+" : "")}${(-losses[i]).toFixed(2)}% (×${(w[i] * n).toFixed(1)})`).join(", ") +
+    ". Both big losses and big gains appear, because extreme days of either sign raise the variance.";
+  $("explain-sg").textContent =
+    `In the language of the spin-glass page: q* = ${fmt(sol.q, 3)} (the worst-case mean loss) plays the overlap, ` +
+    `m* the Parisi parameter, and a binding budget is the low-temperature phase. The dual replaces a search over ${n} weights by a search over two numbers.`;
+
+  // charts
+  const idx = Array.from(losses.keys()).sort((a, b) => losses[a] - losses[b]);
+  const xs = idx.map((i) => losses[i]), lr = idx.map((i) => w[i] * n);
+  lineChart($("chart-lr"), {
+    xs, xLabel: "loss ℓ = −return (%)", yLabel: "n · ν*(day)",
+    series: [{ name: "likelihood ratio", ys: lr, color: "--series-1" }],
+    yDomain: [0, Math.max(1.5, ...lr) * 1.06],
+    hlines: [{ y: 1, label: "data weight (1/n)", short: "1/n" }],
+    xFmt: tickFmt, yFmt: (v) => v.toFixed(2),
+    tipX: (x) => `return ${(-x >= 0 ? "+" : "")}${(-x).toFixed(2)}%`,
+  });
+  const hst = histogram(losses, w);
+  lineChart($("chart-hist"), {
+    xs: hst.centers, xLabel: "loss ℓ (%)", yLabel: "share of weight",
+    series: [{ name: "worst case ν*", ys: hst.wc, color: "--series-1", wash: "--series-1-wash", area: true },
+             { name: "data", ys: hst.nom, color: "--nominal" }],
+    yDomain: [0, Math.max(...hst.wc, ...hst.nom) * 1.08],
+    xFmt: tickFmt, yFmt: (v) => v.toFixed(3),
+  });
+  const Ps = r.path.map((p) => tau * p.P), Hs = r.path.map((p) => p.H);
+  const top = r.J + Math.max(0.5 * Math.abs(r.J), 0.5) * (binding ? 1 : 3);
+  lineChart($("chart-dual"), {
+    xs: r.ms, xLog: true, xLabel: "m (Parisi parameter, log scale)", yLabel: "τ·P(q*(m), m)",
+    series: [{ name: "τ·P along the KKT path", ys: Ps, color: "--series-1" }],
+    yDomain: [r.J - 0.08 * (top - r.J), top],
+    hlines: [{ y: tau * sol.primal, label: `robust objective J = ${fmt(r.J, 3)}`, short: `J = ${fmt(r.J, 3)}` }],
+    points: [{ x: sol.m, y: r.J, color: "--series-1", label: `m* = ${sol.m < 0.01 ? sol.m.toExponential(1) : fmt(sol.m, 3)}` }],
+    xFmt: (v) => (v >= 0.01 ? String(v) : v.toExponential(0)), yFmt: (v) => v.toFixed(2),
+    tipX: (x) => `m = ${x < 0.01 ? x.toExponential(2) : x.toFixed(3)}`,
+  });
+  const hMax = Math.max(rho * 2.5, Math.min(Math.max(...Hs), rho * 4)) * 1.05;
+  lineChart($("chart-H"), {
+    xs: r.ms, xLog: true, xLabel: "m (Parisi parameter, log scale)", yLabel: "KL(ν | data)",
+    series: [{ name: "KL of the Gibbs reweighting", ys: Hs, color: "--series-1" }],
+    yDomain: [0, hMax],
+    hlines: [{ y: rho, label: `radius ρ = ${fmt(rho, 3)}`, short: `ρ = ${fmt(rho, 3)}` }],
+    points: [{ x: sol.m, y: sol.nu.H, color: "--series-1", label: binding ? "m*" : "m* = 1, KL < ρ" }],
+    xFmt: (v) => (v >= 0.01 ? String(v) : v.toExponential(0)), yFmt: (v) => v.toFixed(2),
+    tipX: (x) => `m = ${x < 0.01 ? x.toExponential(2) : x.toFixed(3)}`,
+  });
+
+  fillTable($("numbers").tBodies[0], [
+    ["Data", `${state.source}, ${n} returns${state.scaled ? " (converted from fractions to %)" : ""}`],
+    ["γ, τ, ρ", `${gamma.toFixed(2)}, ${tau.toFixed(4)}, ${rho.toFixed(3)}`],
+    ["Robust objective J", fmt(r.J, 10)], ["Primal value τ·sup Ω", fmt(tau * sol.primal, 10)],
+    ["Worst-case risk", fmt(r.worstRisk, 8)], ["Nominal risk", fmt(r.nominalRisk, 8)],
+    ["Worst-case mean loss q*", fmt(sol.q, 8)], ["Parisi parameter m*", sol.m.toPrecision(8)],
+    ["KL multiplier τ/m*", fmt(tau / sol.m, 8)], ["Price of robustness τ(1/m* − 1)", fmt(price, 8)],
+    ["KL(ν* | data)", fmt(sol.nu.H, 8)], ["Critical radius ρ_c", fmt(r.rhoC, 8)],
+  ]);
+}
+
+let pending = false;
+function schedule() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; render(compute()); });
+}
+for (const id of ["gamma", "tau", "rho"]) $(id).addEventListener("input", schedule);
+
+function parseReturns(text) {
+  const out = [];
+  for (const line of text.split(/\r?\n/)) {
+    for (const cell of line.split(/[,;\t ]+/)) {
+      const v = Number(cell.trim());
+      if (cell.trim() !== "" && Number.isFinite(v)) { out.push(v); break; }
+    }
+  }
+  return out;
+}
+$("csv").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const vals = parseReturns(await file.text());
+  if (vals.length < 10) { $("data-hint").textContent = `Could not find at least 10 numbers in ${file.name}. Expected one return per line (in %), first column.`; return; }
+  const scaled = Math.max(...vals.map(Math.abs)) < 0.5;   // looks like fractions, not %
+  state.returns = scaled ? vals.map((v) => 100 * v) : vals;
+  state.source = file.name; state.scaled = scaled;
+  $("data-hint").textContent = `Loaded ${vals.length} returns from ${file.name}` +
+    (scaled ? " (they looked like fractions, so they were multiplied by 100 to get %)." : ".") + " The file stays in your browser.";
+  schedule();
+});
+$("use-sample").addEventListener("click", () => {
+  state.returns = window.SAMPLE_RETURNS.slice(); state.source = "built-in sample"; state.scaled = false;
+  $("csv").value = "";
+  $("data-hint").textContent = "Built-in: 756 synthetic fat-tailed daily returns (Student-t, 4 degrees of freedom). Load your own CSV: one return per line in %, first column; the file stays in your browser.";
+  schedule();
+});
+onRelayout(document.querySelector(".wrap"), () => last && render(last));
+schedule();
+</script>
+</body>
+</html>

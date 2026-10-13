@@ -16,17 +16,19 @@ KL-constrained DRO meets spin glasses: in REM-type approximations of TAP free en
 
 ## Dashboard
 
-`docs/index.html` is an interactive dashboard, computed live in the browser by
-`docs/solver.js`, a JavaScript port of the Python package.
+Two interactive pages in `docs/`, computed live in the browser by `docs/solver.js`,
+a JavaScript port of the Python package (checked against it by
+`scripts/check_dashboard.py`, which needs Node.js):
 
-- **Panel 1: the KL budget as a robustness radius.** Sliders for β, h and the
-  budget ρ; the worst-case distribution against the Gaussian, the Parisi function
-  along the KKT path, and complementary slackness (m* = 1 or H = ρ).
-- Panels 2 and 3 (convex reparametrisation, phase diagram): coming next.
+- **`docs/index.html`: the KL budget as a robustness radius (spin-glass model).**
+  Sliders for β, h and the budget ρ; the worst-case distribution against the
+  Gaussian, the Parisi function along the KKT path, and complementary slackness.
+- **`docs/mean-variance.html`: robust mean-variance on a dataset.** The same duality
+  applied to KL-DRO on data: an adversary reweights daily returns within a KL ball
+  to maximise E ℓ + γ Var ℓ − τ KL. Sliders for γ, τ and ρ, and you can load your
+  own CSV of returns (it stays in the browser).
 
-Open `docs/index.html` in a browser (double-click works, no server needed).
-`python scripts/check_dashboard.py` checks the JavaScript solver against the
-Python package (requires Node.js).
+Open either file in a browser; double-clicking works, no server needed.
 
 ## Python package
 
@@ -34,8 +36,20 @@ Python package (requires Node.js).
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[test]"
 pytest
-python -m tapdual --beta 5 --h 0.5
+python -m tapdual sk --beta 5 --h 0.5                  # spin-glass model
+python -m tapdual mv --gamma 1 --tau 0.5 --rho 0.1     # robust mean-variance, built-in data
+python -m tapdual mv --csv my_returns.csv              # ... on your own returns (in %)
 ```
+
+`pyproject.toml` describes the package for `pip`; there is no need to open it.
+
+### Checks
+
+- primal (sup over measures) = dual (Parisi inf) to ~1e-12, in both phases;
+- the KKT conditions, the jointly convex coordinates (p, λ), and the transition;
+- the classical REM threshold β_c = √(2 log 2) is reproduced to 1e-8;
+- on data, a direct optimisation over all sample weights gives the same value
+  as the two-parameter dual.
 
 ## Papers
 
