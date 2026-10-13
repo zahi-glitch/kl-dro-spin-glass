@@ -154,3 +154,40 @@ def terms(q: np.ndarray, beta: float):
 def log_Z(beta: float) -> float:
     a = -beta * ENERGIES
     return float(a.max() + np.log(np.exp(a - a.max()).sum()))
+
+
+# --------------------------------------------------------------------------- Hopfield = RBM
+class RBM:
+    """Restricted Boltzmann machine with +-1 visible units and Gaussian hidden units.
+
+    Joint weight  exp( -|z|^2 / 2 + sqrt(beta / N) * sum_{i,mu} xi_i^mu s_i z_mu ).
+    Integrating out z (a Gaussian integral) leaves exp( (beta N / 2) sum_mu m_mu(s)^2 ),
+    the Hopfield Gibbs weight at inverse temperature beta with the patterns xi as
+    weights (Barra, Bernacchia, Santucci, Contucci 2012).
+    """
+
+    def __init__(self, patterns: np.ndarray = PATTERNS, beta: float = 3.0):
+        self.xi = np.asarray(patterns, dtype=float)
+        self.P, self.N = self.xi.shape
+        self.beta = beta
+
+    @property
+    def scale(self) -> float:
+        return np.sqrt(self.beta / self.N)
+
+    def sample_hidden(self, s: np.ndarray, rng) -> np.ndarray:
+        """z_mu | s  ~  N( sqrt(beta N) m_mu(s), 1 )."""
+        return self.scale * (self.xi @ s) + rng.standard_normal(self.P)
+
+    def sample_visible(self, z: np.ndarray, rng) -> np.ndarray:
+        """s_i | z independent:  P(s_i = +1) = 1 / (1 + exp(-2 h_i)),  h_i = sqrt(beta/N) sum_mu xi_i^mu z_mu."""
+        h = self.scale * (self.xi.T @ z)
+        return np.where(rng.random(self.N) < 1.0 / (1.0 + np.exp(-2.0 * h)), 1.0, -1.0)
+
+    def overlaps(self, s: np.ndarray) -> np.ndarray:
+        return self.xi @ s / self.N
+
+    def hopfield_log_weight(self, s: np.ndarray) -> float:
+        """log of the Hopfield Gibbs weight exp((beta N / 2) sum_mu m_mu^2), up to a constant."""
+        m = self.overlaps(s)
+        return 0.5 * self.beta * self.N * float(m @ m)

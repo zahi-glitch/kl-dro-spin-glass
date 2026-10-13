@@ -8,12 +8,13 @@ from PySide6.QtWidgets import (QHBoxLayout, QLabel, QListWidget, QListWidgetItem
 from . import theme
 from .chapter1 import Chapter1
 from .chapter2 import Chapter2
+from .chapter3 import Chapter3
 from .widgets import label
 
 CHAPTERS = [
     ("1", "Spins, energy, temperature", Chapter1),
     ("2", "Free energy is an optimisation", Chapter2),
-    ("3", "Hopfield = Boltzmann machine", None),
+    ("3", "Hopfield = Boltzmann machine", Chapter3),
     ("4", "Counting gives a budget", None),
     ("5", "Robust optimisation: ML and finance", None),
     ("6", "What the non-linearity adds", None),

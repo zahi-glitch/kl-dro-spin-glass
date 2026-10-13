@@ -25,7 +25,8 @@ python -m tapdual.app
 ```
 
 Ready: chapter 1 (Hopfield memory recall, two SK replicas, REM freezing) and
-chapter 2 (free energy as an optimisation: energy against entropy, softmax, ELBO).
+chapter 2 (free energy as an optimisation: energy against entropy, softmax, ELBO) and
+chapter 3 (a Hopfield network is a restricted Boltzmann machine, recalled live).
 
 ## Dashboard
 

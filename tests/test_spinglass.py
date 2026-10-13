@@ -47,3 +47,36 @@ def test_gibbs_variational_principle():
             q, p = boltzmann(t), boltzmann(beta)
             kl = float((q * np.log(q / p)).sum())
             assert abs(log_Z(beta) - terms(q, beta)[2] - kl) < 1e-12
+
+
+def test_rbm_marginal_is_hopfield():
+    """Block Gibbs on the RBM samples the Hopfield distribution (exact check on 2^6 states).
+
+    Many independent chains, so slow mixing between memory valleys does not bias the check."""
+    from itertools import product
+    from tapdual.spinglass import RBM
+    rng = np.random.default_rng(0)
+    xi = rng.choice([-1.0, 1.0], (2, 6))
+    rbm = RBM(xi, beta=1.5)
+    states = np.array(list(product([-1.0, 1.0], repeat=6)))
+    logw = np.array([rbm.hopfield_log_weight(s) for s in states])
+    exact = np.exp(logw - logw.max()); exact /= exact.sum()
+    S = np.tile(states[0], (20000, 1))
+    for _ in range(150):                                   # vectorised block Gibbs, 20000 chains
+        Z = rbm.scale * (S @ xi.T) + rng.standard_normal((S.shape[0], 2))
+        H = rbm.scale * (Z @ xi)
+        S = np.where(rng.random(S.shape) < 1.0 / (1.0 + np.exp(-2.0 * H)), 1.0, -1.0)
+    codes = ((S > 0) * (2 ** np.arange(5, -1, -1))).sum(1)
+    empirical = np.bincount(codes, minlength=64) / S.shape[0]
+    assert 0.5 * np.abs(empirical - exact).sum() < 0.02    # total variation distance
+
+
+def test_rbm_recalls_memories():
+    from tapdual.spinglass import RBM
+    rbm, rng = RBM(beta=3.0), np.random.default_rng(1)
+    for mu in range(3):
+        s = PATTERNS[mu].copy()
+        s[128:] = rng.choice([-1.0, 1.0], 128)           # half unknown
+        for _ in range(15):
+            s = rbm.sample_visible(rbm.sample_hidden(s, rng), rng)
+        assert rbm.overlaps(s)[mu] > 0.95
