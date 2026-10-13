@@ -14,6 +14,18 @@ KL-constrained DRO meets spin glasses: in REM-type approximations of TAP free en
 4. The dictionary: Parisi parameters as Lagrange multipliers.
 5. Numerical primal-dual check and the phase transition.
 
+## Desktop app (work in progress)
+
+A local Mac/Linux/Windows app that tells the story from spin glasses to robust
+optimisation, chapter by chapter, with live simulations:
+
+```bash
+pip install -e ".[app]"        # adds PySide6 and pyqtgraph
+python -m tapdual.app
+```
+
+Chapter 1 (ready): Hopfield memory recall, two SK replicas, REM freezing.
+
 ## Dashboard
 
 Two interactive pages in `docs/`, computed live in the browser by `docs/solver.js`,

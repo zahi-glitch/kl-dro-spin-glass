@@ -1,0 +1,208 @@
+"""Small reusable widgets: cards, spin grids, overlap bars, sliders, 'go deeper' boxes."""
+from __future__ import annotations
+
+import numpy as np
+from PySide6.QtCore import QRectF, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QPainter
+from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy,
+                               QSlider, QVBoxLayout, QWidget)
+
+from . import theme
+
+
+def label(text: str, kind: str = "body", wrap: bool = True) -> QLabel:
+    lab = QLabel(text)
+    lab.setObjectName(kind)
+    lab.setWordWrap(wrap)
+    lab.setTextFormat(Qt.RichText)
+    return lab
+
+
+class Card(QFrame):
+    def __init__(self, title: str = "", subtitle: str = ""):
+        super().__init__()
+        self.setObjectName("card")
+        self.lay = QVBoxLayout(self)
+        self.lay.setContentsMargins(18, 16, 18, 16)
+        self.lay.setSpacing(8)
+        if title:
+            self.lay.addWidget(label(title, "h2"))
+        if subtitle:
+            self.lay.addWidget(label(subtitle, "body"))
+
+    def add(self, w, stretch: int = 0):
+        self.lay.addWidget(w, stretch)
+        return w
+
+
+class SpinGrid(QWidget):
+    """A square grid of +-1 spins, painted as crisp cells."""
+    clicked = Signal()
+
+    def __init__(self, side: int = 16, cell: int = 18, selectable: bool = False):
+        super().__init__()
+        self.side, self.state, self.selected, self.selectable = side, np.ones(side * side), False, selectable
+        self.setMinimumSize(side * 6, side * 6)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._pref = side * cell
+        if selectable:
+            self.setCursor(Qt.PointingHandCursor)
+
+    def sizeHint(self):
+        from PySide6.QtCore import QSize
+        return QSize(self._pref, self._pref)
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, w):
+        return w
+
+    def set_state(self, s):
+        self.state = np.asarray(s)
+        self.update()
+
+    def set_selected(self, on: bool):
+        self.selected = on
+        self.update()
+
+    def mousePressEvent(self, e):
+        if self.selectable:
+            self.clicked.emit()
+
+    def paintEvent(self, e):
+        p = QPainter(self)
+        size = min(self.width(), self.height())
+        x0, y0 = (self.width() - size) / 2, (self.height() - size) / 2
+        c = size / self.side
+        up, down = QColor(theme.SPIN_UP), QColor(theme.SPIN_DOWN)
+        p.setPen(Qt.NoPen)
+        for k, v in enumerate(self.state):
+            i, j = divmod(k, self.side)
+            p.setBrush(up if v > 0 else down)
+            p.drawRect(QRectF(x0 + j * c + 0.5, y0 + i * c + 0.5, c - 1, c - 1))
+        if self.selected:
+            pen = p.pen()
+            p.setPen(QColor(theme.ACCENT))
+            p.setBrush(Qt.NoBrush)
+            from PySide6.QtGui import QPen
+            p.setPen(QPen(QColor(theme.ACCENT), 3))
+            p.drawRoundedRect(QRectF(x0 + 1.5, y0 + 1.5, size - 3, size - 3), 4, 4)
+        p.end()
+
+
+class OverlapBars(QWidget):
+    """Horizontal bars for the overlaps m_mu in [-1, 1], one row per pattern."""
+
+    def __init__(self, names):
+        super().__init__()
+        self.names, self.values, self.target = list(names), np.zeros(len(names)), 0
+        self.setMinimumHeight(34 * len(names) + 8)
+
+    def set_values(self, values, target: int):
+        self.values, self.target = np.asarray(values), target
+        self.update()
+
+    def paintEvent(self, e):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        W = self.width()
+        lab_w, val_w = 34, 56
+        x0, x1 = lab_w, W - val_w
+        mid = (x0 + x1) / 2
+        f = QFont(self.font()); f.setPixelSize(15)
+        for r, (name, v) in enumerate(zip(self.names, self.values)):
+            y = 6 + r * 34
+            p.setPen(QColor(theme.INK if r == self.target else theme.INK_2))
+            p.setFont(f)
+            p.drawText(QRectF(0, y, lab_w - 8, 22), Qt.AlignVCenter | Qt.AlignRight, name)
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(theme.GRID))
+            p.drawRoundedRect(QRectF(x0, y + 7, x1 - x0, 8), 4, 4)
+            p.setBrush(QColor(theme.ACCENT if r == self.target else theme.INK_3))
+            a, b = sorted((mid, mid + v * (x1 - x0) / 2))
+            p.drawRoundedRect(QRectF(a, y + 5, max(b - a, 2), 12), 4, 4)
+            p.setPen(QColor(theme.INK_3))
+            p.drawLine(int(mid), y + 2, int(mid), y + 20)
+            p.setPen(QColor(theme.INK))
+            p.drawText(QRectF(x1 + 6, y, val_w - 6, 22), Qt.AlignVCenter | Qt.AlignLeft, f"{v:+.2f}")
+        p.end()
+
+
+class LabeledSlider(QWidget):
+    """Slider with a name, a live value and an optional hint; maps an int range to floats."""
+    changed = Signal(float)
+
+    def __init__(self, name: str, lo: float, hi: float, value: float, steps: int = 200,
+                 fmt=lambda v: f"{v:.2f}", hint: str = ""):
+        super().__init__()
+        self.lo, self.hi, self.steps, self.fmt = lo, hi, steps, fmt
+        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(4)
+        top = QHBoxLayout()
+        self.name = label(f"<b>{name}</b>", "body", wrap=False)
+        self.val = label("", "body", wrap=False)
+        top.addWidget(self.name); top.addStretch(1); top.addWidget(self.val)
+        lay.addLayout(top)
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setRange(0, steps)
+        lay.addWidget(self.slider)
+        if hint:
+            lay.addWidget(label(hint, "small"))
+        self.slider.valueChanged.connect(self._emit)
+        self.set_value(value)
+
+    def value(self) -> float:
+        return self.lo + (self.hi - self.lo) * self.slider.value() / self.steps
+
+    def set_value(self, v: float):
+        self.slider.setValue(round((v - self.lo) / (self.hi - self.lo) * self.steps))
+        self._emit()
+
+    def _emit(self, *_):
+        self.val.setText(self.fmt(self.value()))
+        self.changed.emit(self.value())
+
+
+class Deeper(QWidget):
+    """A collapsible 'Go deeper' box for the mathematics."""
+
+    def __init__(self, html: str, title: str = "Go deeper"):
+        super().__init__()
+        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(4)
+        self.btn = QPushButton(f"▸  {title}"); self.btn.setObjectName("deeper")
+        self.btn.setCursor(Qt.PointingHandCursor)
+        self.body = label(html, "body"); self.body.setVisible(False)
+        self.title = title
+        lay.addWidget(self.btn); lay.addWidget(self.body)
+        self.btn.clicked.connect(self.toggle)
+
+    def toggle(self):
+        on = not self.body.isVisible()
+        self.body.setVisible(on)
+        self.btn.setText(f"{'▾' if on else '▸'}  {self.title}")
+
+
+class Segmented(QWidget):
+    """Row of pill buttons; exactly one is checked."""
+    changed = Signal(int)
+
+    def __init__(self, names):
+        super().__init__()
+        lay = QHBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(6)
+        self.buttons = []
+        for i, n in enumerate(names):
+            b = QPushButton(n); b.setObjectName("seg"); b.setCheckable(True); b.setCursor(Qt.PointingHandCursor)
+            b.clicked.connect(lambda _=False, k=i: self.select(k))
+            lay.addWidget(b); self.buttons.append(b)
+        lay.addStretch(1)
+        self.select(0)
+
+    def select(self, k: int):
+        for i, b in enumerate(self.buttons):
+            b.setChecked(i == k)
+        self.changed.emit(k)
+
+
+def hline() -> QFrame:
+    f = QFrame(); f.setFrameShape(QFrame.HLine); f.setStyleSheet(f"color: {theme.BORDER};")
+    return f
