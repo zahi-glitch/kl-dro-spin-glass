@@ -3,19 +3,20 @@
 Paper notation (KSS23, eq. (34), with the -rho convention):
 
     P(q, m) = Phi(q) - q Phi'(q) + (1/m) (log Z^{q,m} + rho) - rho,
-    Z^{q,m} = E_mu exp( m [Phi'(q) phi^2 + f] ),
+    Z^{q,m} = E_mu exp( m [Phi'(q) g + f] ),          g = phi^2 in the paper,
 
-for q in [0, 1], m in (0, 1]. Then  sup_{H <= rho} Omega = inf P.
+for q in the range of g ([0, 1] in the paper), m in (0, 1].
+Then  sup_{H <= rho} Omega = inf P.
 
 DRO / convex coordinates: lambda = 1/m is the multiplier of the KL budget and
-p = Phi'(q) the multiplier of the linearisation x = E_nu[phi^2]. In (p, lambda)
+p = Phi'(q) the multiplier of the linearisation x = E_nu[g]. In (p, lambda)
 
-    P~(p, lambda) = Phi*(p) + lambda log E_mu exp((p phi^2 + f)/lambda)
+    P~(p, lambda) = Phi*(p) + lambda log E_mu exp((p g + f)/lambda)
                     + (lambda - 1) rho,      Phi*(p) = sup_x {Phi(x) - p x},
 
 is jointly convex. The solver uses the two KKT conditions:
 
-    stationarity in q:   q = E_{nu^{q,m}}[phi^2]          (unique root)
+    stationarity in q:   q = E_{nu^{q,m}}[g]              (unique root)
     slackness in m:      m = 1  or  H(nu^{q,m} | mu) = rho.
 """
 from __future__ import annotations
@@ -43,43 +44,45 @@ def parisi_function(quad: Quadrature, q: float, m: float, rho: float = LOG2) -> 
 def parisi_function_convex(quad: Quadrature, p: float, lam: float, rho: float = LOG2) -> float:
     """P~(p, lambda) in the jointly convex coordinates p = Phi'(q), lambda = 1/m.
 
-    Phi*(p) is computed as Phi(q) - q p at the q in [0, 1] with Phi'(q) = p,
-    found by bisection (Phi' is strictly decreasing).
+    Phi*(p) is computed as Phi(q) - q p at the q in the range of g with
+    Phi'(q) = p, found by bisection (Phi' is strictly decreasing).
     """
     if lam < 1.0:
         raise ValueError("lambda must be >= 1")
-    q = _inverse_dPhi(quad.model, p)
+    q = _inverse_dPhi(quad, p)
     phi_star = quad.model.Phi(q) - q * p
     log_Z = quad.tilt(p / lam, 1.0 / lam).log_Z
     return phi_star + lam * log_Z + (lam - 1.0) * rho
 
 
-def _inverse_dPhi(model: Model, p: float) -> float:
-    lo, hi = model.dPhi(1.0), model.dPhi(0.0)  # Phi' decreasing
+def _inverse_dPhi(quad: Quadrature, p: float) -> float:
+    model, a, b = quad.model, quad.q_lo, quad.q_hi
+    lo, hi = model.dPhi(b), model.dPhi(a)  # Phi' decreasing
     if not lo - 1e-12 <= p <= hi + 1e-12:
-        raise ValueError(f"p={p} outside Phi'([0,1]) = [{lo}, {hi}]")
-    return brentq(lambda q: model.dPhi(q) - p, 0.0, 1.0, xtol=1e-15)
+        raise ValueError(f"p={p} outside Phi'([{a}, {b}]) = [{lo}, {hi}]")
+    return brentq(lambda q: model.dPhi(q) - p, a, b, xtol=1e-15)
 
 
 def fixed_point_q(quad: Quadrature, m: float) -> float:
-    """Unique q in [0, 1] with q = E_{nu^{q,m}}[phi^2].
+    """Unique q in the range of g with q = E_{nu^{q,m}}[g].
 
-    q - E_{nu^{q,m}}[phi^2] is strictly increasing in q when Phi'' < 0,
-    so the root is bracketed by [0, 1] and unique.
+    q - E_{nu^{q,m}}[g] is strictly increasing in q when Phi'' < 0, so the
+    root is bracketed by the range of g and unique.
     """
-    g = lambda q: q - quad.gibbs(q, m).E_phi2
-    g0, g1 = g(0.0), g(1.0)
-    if g0 >= 0.0:
-        return 0.0
-    if g1 <= 0.0:
-        return 1.0
-    return brentq(g, 0.0, 1.0, xtol=1e-14, rtol=1e-14)
+    a, b = quad.q_lo, quad.q_hi
+    gap = lambda q: q - quad.gibbs(q, m).E_g
+    if gap(a) >= 0.0:
+        return a
+    if gap(b) <= 0.0:
+        return b
+    tol = 1e-14 * max(1.0, abs(a), abs(b))
+    return brentq(gap, a, b, xtol=tol, rtol=1e-14)
 
 
 @dataclass(frozen=True)
 class DualSolution:
     value: float        # inf P = sup_{H <= rho} Omega
-    q: float            # optimal overlap q*
+    q: float            # optimal overlap q* = E_{nu*}[g]
     m: float            # optimal Parisi parameter m*
     lam: float          # KL multiplier lambda* = 1/m*
     p: float            # linearisation multiplier p* = Phi'(q*)

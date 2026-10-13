@@ -1,15 +1,17 @@
-"""Expectations under mu = N(0,1) and under exponentially tilted measures.
+"""Expectations under mu and under exponentially tilted measures.
 
-Integrals against mu use the trapezoid rule on a uniform grid of [-L, L]
-with the Gaussian density folded into the weights. For integrands that are
-analytic in a strip, as here (tanh(h + beta x) has its nearest poles at
-distance pi/(2 beta) from the real axis), the trapezoid rule converges
-geometrically in the number of points, and it does not suffer from the
-loss of accuracy of Gauss-Hermite quadrature when tanh(beta x) varies on
-scales finer than the Hermite node spacing (large beta).
+Two kinds of reference measure:
+
+* mu = N(0, 1): the trapezoid rule on a uniform grid of [-L, L] with the
+  Gaussian density folded into the weights. For integrands analytic in a
+  strip, as here (tanh(h + beta x) has its nearest poles at distance
+  pi/(2 beta) from the real axis), the trapezoid rule converges geometrically,
+  and it does not lose accuracy when tanh(beta x) is steep (large beta), as
+  Gauss-Hermite quadrature does.
+* mu = empirical measure on data points: weights 1/n, exact.
 
 All exponentials are evaluated with a log-sum-exp shift, so no overflow
-occurs for large tilts. The same grid is used by the dashboard (docs/solver.js).
+occurs for large tilts. The dashboard (docs/solver.js) uses the same rules.
 """
 from __future__ import annotations
 
@@ -38,37 +40,49 @@ def gaussian_grid(half_width: float = DEFAULT_HALF_WIDTH,
 
 @dataclass(frozen=True)
 class Tilt:
-    """Summary of nu ~ exp(a phi^2 + b f) mu."""
+    """Summary of nu ~ exp(a g + b f) mu."""
 
-    log_Z: float     # log E_mu exp(a phi^2 + b f)
-    E_phi2: float    # E_nu[phi^2]
+    log_Z: float     # log E_mu exp(a g + b f)
+    E_g: float       # E_nu[g]
     E_f: float       # E_nu[f]
     H: float         # H(nu | mu)
 
 
 class Quadrature:
-    """Caches phi^2 and f on the integration grid for one model."""
+    """Caches g and f at the integration points of one model."""
 
     def __init__(self, model: Model, n_points: int = DEFAULT_POINTS,
                  half_width: float = DEFAULT_HALF_WIDTH):
         self.model = model
-        self.x, self.w = gaussian_grid(half_width, n_points)
-        self.phi2 = model.phi2(self.x)
-        self.f = model.f(self.x)
+        if model.support is None:
+            self.x, self.w = gaussian_grid(half_width, n_points)
+        else:
+            self.x = np.asarray(model.support, dtype=float)
+            self.w = np.full(self.x.size, 1.0 / self.x.size)
+        self.g = np.asarray(model.g(self.x), dtype=float)
+        self.f = np.asarray(model.f(self.x), dtype=float)
+        lo, hi = model.q_range if model.q_range else (self.g.min(), self.g.max())
+        self.q_lo, self.q_hi = float(lo), float(hi)
+
+    def weights(self, a: float, b: float) -> np.ndarray:
+        """Probabilities of nu ~ exp(a g + b f) mu at the integration points."""
+        expo = a * self.g + b * self.f
+        p = self.w * np.exp(expo - expo.max())
+        return p / p.sum()
 
     def tilt(self, a: float, b: float) -> Tilt:
-        """Statistics of the tilted measure nu ~ exp(a phi^2 + b f) mu."""
-        expo = a * self.phi2 + b * self.f
+        """Statistics of the tilted measure nu ~ exp(a g + b f) mu."""
+        expo = a * self.g + b * self.f
         shift = expo.max()
         weights = self.w * np.exp(expo - shift)
         Z = weights.sum()
         weights /= Z
         log_Z = shift + np.log(Z)
-        E_phi2 = float(weights @ self.phi2)
+        E_g = float(weights @ self.g)
         E_f = float(weights @ self.f)
-        H = a * E_phi2 + b * E_f - log_Z  # Gibbs identity
-        return Tilt(float(log_Z), E_phi2, E_f, float(max(H, 0.0)))
+        H = a * E_g + b * E_f - log_Z  # Gibbs identity
+        return Tilt(float(log_Z), E_g, E_f, float(max(H, 0.0)))
 
     def gibbs(self, q: float, m: float) -> Tilt:
-        """Generalised Gibbs measure nu^{q,m} ~ exp(m [Phi'(q) phi^2 + f]) mu."""
+        """Generalised Gibbs measure nu^{q,m} ~ exp(m [Phi'(q) g + f]) mu."""
         return self.tilt(m * self.model.dPhi(q), m)

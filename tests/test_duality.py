@@ -20,7 +20,7 @@ def test_primal_equals_dual(beta, h):
 @pytest.mark.parametrize("beta,h", GRID)
 def test_kkt_conditions(beta, h):
     d = solve_dual(sk_model(beta, h))
-    assert abs(d.q - d.gibbs.E_phi2) < 1e-10           # stationarity in q
+    assert abs(d.q - d.gibbs.E_g) < 1e-10           # stationarity in q
     if d.phase == "high":
         assert d.m == 1.0 and d.gibbs.H <= LOG2         # budget slack
     else:
@@ -72,7 +72,7 @@ def test_larger_budget_raises_critical_beta():
 def test_fixed_point_unique_bracket():
     quad = Quadrature(sk_model(4.0, 0.0))
     q = fixed_point_q(quad, 0.8)
-    assert 0.0 < q < 1.0 and abs(q - quad.gibbs(q, 0.8).E_phi2) < 1e-12
+    assert 0.0 < q < 1.0 and abs(q - quad.gibbs(q, 0.8).E_g) < 1e-12
 
 
 @pytest.mark.parametrize("beta,h,a,b", [(7.5, 0.0, 0.0, 0.0), (7.5, 0.3, -3.0, 0.6), (12.0, 0.5, -10.0, 0.4)])
@@ -81,9 +81,9 @@ def test_quadrature_accurate_at_large_beta(beta, h, a, b):
     from scipy.integrate import quad
     model = sk_model(beta, h)
     nu = Quadrature(model).tilt(a, b)
-    dens = lambda x: np.exp(a * model.phi2(x) + b * model.f(x) - 0.5 * x * x) / np.sqrt(2 * np.pi)
+    dens = lambda x: np.exp(a * model.g(x) + b * model.f(x) - 0.5 * x * x) / np.sqrt(2 * np.pi)
     opts = dict(points=[-h / beta], limit=1000, epsabs=1e-15, epsrel=1e-13)
     Z = quad(dens, -14, 14, **opts)[0]
-    E2 = quad(lambda x: model.phi2(x) * dens(x), -14, 14, **opts)[0] / Z
+    E2 = quad(lambda x: model.g(x) * dens(x), -14, 14, **opts)[0] / Z
     assert abs(nu.log_Z - np.log(Z)) < 1e-10
-    assert abs(nu.E_phi2 - E2) < 1e-10
+    assert abs(nu.E_g - E2) < 1e-10
