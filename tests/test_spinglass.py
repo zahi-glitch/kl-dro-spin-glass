@@ -36,3 +36,14 @@ def test_rem_freezing():
     assert rem.entropy_per_spin(0.0) > 0.69        # uniform: log 2
     assert rem.effective_states(3.0) < 5           # frozen onto a few states
     assert abs(rem.free_energy(0.5) - REM.free_energy_theory(0.5)) < 0.02
+
+
+def test_gibbs_variational_principle():
+    from tapdual.spinglass import boltzmann, log_Z, terms
+    for beta in (0.3, 1.2, 2.5):
+        best = terms(boltzmann(beta), beta)[2]
+        assert abs(best - log_Z(beta)) < 1e-12
+        for t in (0.0, beta / 2, beta + 1):
+            q, p = boltzmann(t), boltzmann(beta)
+            kl = float((q * np.log(q / p)).sum())
+            assert abs(log_Z(beta) - terms(q, beta)[2] - kl) < 1e-12

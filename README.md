@@ -24,7 +24,8 @@ pip install -e ".[app]"        # adds PySide6 and pyqtgraph
 python -m tapdual.app
 ```
 
-Chapter 1 (ready): Hopfield memory recall, two SK replicas, REM freezing.
+Ready: chapter 1 (Hopfield memory recall, two SK replicas, REM freezing) and
+chapter 2 (free energy as an optimisation: energy against entropy, softmax, ELBO).
 
 ## Dashboard
 

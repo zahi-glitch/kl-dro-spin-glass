@@ -130,3 +130,27 @@ class REM:
     @classmethod
     def free_energy_theory(cls, beta: float) -> float:
         return np.log(2) + beta * beta / 2 if beta <= cls.beta_c else beta * cls.beta_c
+
+
+# --------------------------------------------------------------------------- Gibbs variational principle
+# Ten states with fixed energies: think of ten configurations, or ten classes with logits -E.
+ENERGIES = np.array([-2.1, -1.6, -1.2, -0.9, -0.4, 0.0, 0.3, 0.8, 1.3, 1.9])
+LOGN = np.log(ENERGIES.size)
+
+
+def boltzmann(t: float) -> np.ndarray:
+    a = -t * ENERGIES
+    w = np.exp(a - a.max())
+    return w / w.sum()
+
+
+def terms(q: np.ndarray, beta: float):
+    """Energy term -beta E_q[E], entropy H(q), and their sum."""
+    e = -beta * float(q @ ENERGIES)
+    h = float(-(q[q > 0] * np.log(q[q > 0])).sum())
+    return e, h, e + h
+
+
+def log_Z(beta: float) -> float:
+    a = -beta * ENERGIES
+    return float(a.max() + np.log(np.exp(a - a.max()).sum()))
