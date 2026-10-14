@@ -5,89 +5,18 @@
 
 Run it once a month (for example on the first working day). Each run appends one row per strategy to
 paper_trading/log.csv, so after a few months you have a real out-of-sample record to compare.
+The same computation is in the app: section 5, tab "Today: live data".
 
-This is an educational tool, not investment advice.
-
-Defaults, chosen once and kept fixed:
-  universe  nine liquid ETFs, one per major asset class (see UNIVERSE below). No cash-like fund: with one,
-            the robust portfolio simply goes to cash, because at this budget it behaves like a
-            minimum-variance portfolio (see results/backtest/summary.md).
-  window    the last 504 trading days (two years) of daily returns
-  settings  the same as the backtest: gamma = 0.05, rho = 0.05, tau = 0.1
+This is an educational tool, not investment advice. Defaults and settings: see tapdual/live.py.
 """
 from __future__ import annotations
 
 import argparse
-import csv
-from datetime import date
-from pathlib import Path
 
 import numpy as np
 
-from tapdual.backtest import Strategy
-from tapdual.dro import worst_case_mean_variance
-
-UNIVERSE = {
-    "SPY": "US stocks (S&P 500)",
-    "EFA": "stocks, other developed countries",
-    "EEM": "stocks, emerging markets",
-    "VNQ": "US real estate",
-    "TLT": "long-term US government bonds",
-    "IEF": "medium-term US government bonds",
-    "LQD": "US corporate bonds",
-    "GLD": "gold",
-    "DBC": "commodities",
-}
-WINDOW, GAMMA, RHO, TAU = 504, 0.05, 0.05, 0.1
-STRATEGIES = [
-    Strategy("Equal weight", "equal"),
-    Strategy("Markowitz", "markowitz", gamma=GAMMA),
-    Strategy("Minimum variance", "minvar"),
-    Strategy("Robust mean-variance", "robust_mv", gamma=GAMMA, rho=RHO, tau=TAU),
-]
-LOG = Path(__file__).resolve().parents[1] / "paper_trading" / "log.csv"
-
-
-def download_prices(tickers, years=3):
-    """Daily closing prices adjusted for dividends and splits, from Yahoo Finance."""
-    try:
-        import yfinance as yf
-    except ImportError:
-        raise SystemExit('yfinance is not installed. Run:  pip install -e ".[live]"')
-    data = yf.download(list(tickers), period=f"{years}y", auto_adjust=True, progress=False)["Close"]
-    data = data[list(tickers)].dropna()
-    if len(data) < WINDOW + 1:
-        raise SystemExit(f"only {len(data)} days of prices downloaded; need at least {WINDOW + 1}")
-    return data
-
-
-def read_prices_csv(path, tickers):
-    import pandas as pd
-    df = pd.read_csv(path, parse_dates=[0], index_col=0).sort_index()
-    return df[list(tickers)].dropna()
-
-
-HEADER_FIXED = ["run_date", "prices_as_of", "strategy"]
-
-
-def start_fresh_log_if_universe_changed(tickers):
-    """One log per list of assets: if the assets changed, move the old log aside and start a new one."""
-    if not LOG.exists():
-        return
-    with LOG.open() as f:
-        header = next(csv.reader(f), [])
-    if header != HEADER_FIXED + list(tickers):
-        old = LOG.with_name(f"log-before-{date.today().isoformat()}.csv")
-        LOG.rename(old)
-        print(f"The list of assets changed since the last run: the old log was moved to {old.name} "
-              f"and a new log starts today.")
-
-
-def last_logged_weights(strategy_name, tickers):
-    if not LOG.exists():
-        return None
-    rows = [r for r in csv.DictReader(LOG.open()) if r["strategy"] == strategy_name]
-    return np.array([float(rows[-1][t]) for t in tickers]) if rows else None
+from tapdual.live import (RHO, STRATEGIES, UNIVERSE, append_log, compute, get_prices, start_fresh_log_if_universe_changed,
+                          trades_since_last_log)
 
 
 def main():
@@ -96,56 +25,43 @@ def main():
     ap.add_argument("--tickers", nargs="+", default=list(UNIVERSE), help="override the default universe")
     ap.add_argument("--no-log", action="store_true", help="print only, do not append to the log")
     a = ap.parse_args()
-    tickers = a.tickers
 
-    prices = read_prices_csv(a.prices, tickers) if a.prices else download_prices(tickers)
-    as_of = prices.index[-1].date()
-    P = prices.to_numpy(dtype=float)
-    R = 100.0 * (P[1:] / P[:-1] - 1.0)[-WINDOW:]       # last two years of daily returns, in %
+    try:
+        today = compute(get_prices(a.tickers, a.prices))
+    except RuntimeError as e:
+        raise SystemExit(str(e))
 
-    print(f"\nPrices up to {as_of}; estimation window: the last {len(R)} trading days.")
+    print(f"\nPrices up to {today.as_of}; estimation window: the last {today.window} trading days.")
     print(f"Budget ρ = {RHO}: the adversary may lower each fund's average daily return by about "
           f"{np.sqrt(2 * RHO):.2f} standard deviations, which is more than any fund's real daily average, "
           f"so the robust portfolio stays close to minimum variance.")
     print("Educational tool, not investment advice.\n")
-    weights = {s.name: s.weights(R) for s in STRATEGIES}
 
-    width = max(len(t) for t in tickers)
+    width = max(len(t) for t in today.tickers)
     print(" " * (width + 2) + "".join(f"{s.name:>21}" for s in STRATEGIES) + "   asset")
-    for i, t in enumerate(tickers):
-        print(f"{t:<{width + 2}}" + "".join(f"{100 * weights[s.name][i]:>20.1f}%" for s in STRATEGIES)
+    for i, t in enumerate(today.tickers):
+        print(f"{t:<{width + 2}}" + "".join(f"{100 * today.weights[s.name][i]:>20.1f}%" for s in STRATEGIES)
               + f"   {UNIVERSE.get(t, '')}")
 
-    x = weights["Robust mean-variance"]
-    r = worst_case_mean_variance(-R @ x, GAMMA, TAU, RHO, check_primal=False)
-    dates = prices.index[-len(R):]
-    top = np.argsort(r.weights)[::-1][:5]
     print("\nThe robust portfolio is sized against these past days (the adversary's favourites):")
-    for k in top:
-        print(f"  {dates[k].date()}   portfolio return {R[k] @ x:+.2f}%   weight x{r.weights[k] * len(R):.1f}")
+    for d, ret, mult in today.worst_days:
+        print(f"  {d}   portfolio return {ret:+.2f}%   weight x{mult:.1f}")
 
     if not a.no_log:
-        start_fresh_log_if_universe_changed(tickers)
-    prev = last_logged_weights("Robust mean-variance", tickers)
-    if prev is not None:
+        moved = start_fresh_log_if_universe_changed(today.tickers)
+        if moved:
+            print("\n" + moved)
+    trades = trades_since_last_log(today)
+    if trades is not None:
         print("\nTrades for the robust portfolio since the last log entry (percentage points of the portfolio):")
-        trades = [(t, d) for t, d in zip(tickers, 100 * (x - prev)) if abs(d) >= 0.5]
         for t, d in trades:
             print(f"  {t:<{width}}  {'buy ' if d > 0 else 'sell'} {abs(d):.1f}")
         if not trades:
             print("  none (all changes below 0.5 points)")
 
     if not a.no_log:
-        LOG.parent.mkdir(parents=True, exist_ok=True)
-        new = not LOG.exists()
-        with LOG.open("a", newline="") as f:
-            w = csv.writer(f)
-            if new:
-                w.writerow(HEADER_FIXED + list(tickers))
-            for s in STRATEGIES:
-                w.writerow([date.today().isoformat(), as_of.isoformat(), s.name,
-                            *[f"{v:.6f}" for v in weights[s.name]]])
-        print(f"\nLogged to {LOG}")
+        for m in append_log(today):
+            print("\n" + m)
 
 
 if __name__ == "__main__":

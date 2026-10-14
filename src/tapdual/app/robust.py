@@ -538,6 +538,107 @@ class CaseStudyPage(QWidget):
         lay.addStretch(1)
 
 
+# --------------------------------------------------------------------------- tab 5: today, live data
+class LivePage(QWidget):
+    """Downloads the latest prices when the tab is first opened (in the background) and shows today's portfolios."""
+
+    def __init__(self):
+        super().__init__()
+        from .. import live
+        self.live = live
+        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(16)
+        lay.addWidget(label(
+            "The same four strategies, computed now from the latest market prices (Yahoo Finance, free, needs an "
+            "internet connection). The assets are nine funds (ETFs), one per major asset class; the settings are "
+            "those of the case study. <b>Educational tool, not investment advice.</b>", "body"))
+
+        bar = QWidget(); bl = QHBoxLayout(bar); bl.setContentsMargins(0, 0, 0, 0); bl.setSpacing(10)
+        self.refresh_btn = QPushButton("Download the latest prices"); self.refresh_btn.setObjectName("primary")
+        self.log_btn = QPushButton("Save to my paper-trading log"); self.log_btn.setEnabled(False)
+        bl.addWidget(self.refresh_btn); bl.addWidget(self.log_btn); bl.addStretch(1)
+        lay.addWidget(bar)
+        self.status = label("Opening this tab downloads the prices automatically.", "body")
+        lay.addWidget(self.status)
+
+        self.weights_card = Card("Today's portfolios")
+        self.weights_box = label("", "body"); self.weights_card.add(self.weights_box)
+        self.weights_card.add(label("Minimum variance looks only at how much each fund swings; Markowitz also trusts "
+                                    "the last two years' average returns; the robust portfolio sits between them, "
+                                    "here close to minimum variance (see the case study).", "small"))
+        self.days_card = Card("The past days the robust portfolio is protecting against")
+        self.days_box = label("", "body"); self.days_card.add(self.days_box)
+        self.trades_card = Card("Trades since your last saved entry")
+        self.trades_box = label("", "body"); self.trades_card.add(self.trades_box)
+        for c in (self.weights_card, self.days_card, self.trades_card):
+            c.hide(); lay.addWidget(c)
+        lay.addStretch(1)
+
+        self.today, self.result, self.worker, self.started = None, None, None, False
+        self.poll = QTimer(self); self.poll.setInterval(200); self.poll.timeout.connect(self.collect)
+        self.refresh_btn.clicked.connect(self.start)
+        self.log_btn.clicked.connect(self.save)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if not self.started:
+            self.start()
+
+    def start(self):
+        if self.worker and self.worker.is_alive():
+            return
+        self.started = True
+        self.refresh_btn.setEnabled(False); self.log_btn.setEnabled(False)
+        self.status.setText("Downloading the latest prices and computing the portfolios… (a few seconds)")
+
+        def run():
+            try:
+                prices = self.live.get_prices(list(self.live.UNIVERSE))
+                self.result = ("ok", self.live.compute(prices))
+            except Exception as err:          # shown to the user, never crashes the app
+                self.result = ("error", str(err))
+        self.result = None
+        self.worker = threading.Thread(target=run, daemon=True); self.worker.start(); self.poll.start()
+
+    def collect(self):
+        if self.result is None:
+            return
+        self.poll.stop(); self.refresh_btn.setEnabled(True)
+        kind, value = self.result
+        if kind == "error":
+            self.status.setText(f"<b>Could not get the prices:</b> {value}")
+            return
+        t = self.today = value
+        self.log_btn.setEnabled(True)
+        self.status.setText(f"Prices up to <b>{t.as_of:%d %B %Y}</b>; estimated on the last {t.window} trading days.")
+        names = [s.name for s in self.live.STRATEGIES]
+        rows = [[f"{tk} &nbsp;<span style='color:{theme.INK_3};'>{self.live.UNIVERSE.get(tk, '')}</span>"]
+                + [f"{100 * t.weights[n][i]:.1f}%" for n in names] for i, tk in enumerate(t.tickers)]
+        self.weights_box.setText(_table(["fund"] + names, rows, first_width=320).text())
+        self.days_box.setText(_table(["day", "robust portfolio that day", "weight in the worst case"],
+                                     [[f"{d:%d %b %Y}", f"{ret:+.2f}%", f"×{mult:.1f}"] for d, ret, mult in t.worst_days],
+                                     first_width=140).text())
+        self.trades_box.setText(self._trades_text())
+        for c in (self.weights_card, self.days_card, self.trades_card):
+            c.show()
+
+    def _trades_text(self):
+        trades = self.live.trades_since_last_log(self.today)
+        if trades is None:
+            return ("Nothing saved yet. Press <b>Save to my paper-trading log</b> once a month: from the second "
+                    "entry on, this box lists what to buy and sell.")
+        if not trades:
+            return "No changes above 0.5 percentage points since the last entry."
+        return _table(["fund", "change"], [[tk, f"{'buy' if d > 0 else 'sell'} {abs(d):.1f} points"] for tk, d in trades],
+                      first_width=80).text()
+
+    def save(self):
+        if self.today is None:
+            return
+        msgs = self.live.append_log(self.today)
+        self.status.setText(" ".join(msgs))
+        self.trades_box.setText(self._trades_text())
+
+
 # --------------------------------------------------------------------------- section
 class RobustSection(Section):
     def __init__(self):
@@ -552,11 +653,12 @@ class RobustSection(Section):
                    "Read ν as an adversary who may reweight your data within a budget H(ν | μ) ≤ ρ.",
                    "How bad can things get if the data are slightly wrong, and what plays the role of temperature?"))
         self.seg = Segmented(["Worst case in a KL ball", "Nonlinear risk: the sup becomes an inf", "Dictionary",
-                              "Case study: real data"])
+                              "Case study: real data", "Today: live data"])
         self.lay.addWidget(self.seg)
         self.stack = FitStack()
         self.stack.addWidget(LinearPage()); self.stack.addWidget(NonlinearPage()); self.stack.addWidget(self._dictionary())
         self.stack.addWidget(CaseStudyPage())
+        self.stack.addWidget(LivePage())
         self.stack.setCurrentIndex(0)
         self.lay.addWidget(self.stack)
         self.seg.changed.connect(self.stack.setCurrentIndex)

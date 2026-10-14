@@ -81,6 +81,10 @@ Data: [`data/`](data/README.md), from PyPortfolioOpt (MIT licence).
 
 ## Paper trading with live prices
 
+In the app: section 5, tab **"Today: live data"** downloads the latest prices when you open it and shows
+today's portfolios, the past days the robust portfolio protects against, and (once you save entries)
+what to buy and sell. The same from the command line:
+
 `scripts/today.py` downloads the latest prices from Yahoo Finance (free, via `yfinance`), computes
 today's robust portfolio next to Markowitz and equal weight, shows the past days the worst case is
 sized against, and appends the weights to `paper_trading/log.csv`. Run it once a month to build a real
