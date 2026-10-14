@@ -255,40 +255,59 @@ class Segmented(QWidget):
 
 
 class FrustrationTriangle(QWidget):
-    """Three spins, every pair wants to disagree. Click a spin to flip it; at most two links are satisfied."""
+    """Three spins with couplings of random sign: '=' (want to agree) or '≠' (want to disagree).
+
+    A link is satisfied when J_ij σ_i σ_j > 0. The loop is frustrated when the product of the three signs is
+    negative (Toulouse): then no configuration satisfies all three links. Click a spin to flip it.
+    """
+    EDGES = ((0, 1), (1, 2), (0, 2))
 
     def __init__(self):
         super().__init__()
-        self.s = [1, 1, 1]
-        self.setFixedHeight(190); self.setCursor(Qt.PointingHandCursor)
+        self.s, self.J = [1, 1, 1], [1, 1, -1]
+        self.rng = np.random.default_rng()
+        self.setFixedHeight(214); self.setCursor(Qt.PointingHandCursor)
+
+    def randomize(self):
+        self.J = [int(x) for x in self.rng.choice([-1, 1], 3)]
+        self.update()
+
+    def frustrated(self) -> bool:
+        return self.J[0] * self.J[1] * self.J[2] < 0
 
     def _nodes(self):
         W, H = self.width(), self.height()
-        cx, r = W / 2, min(W, H) * 0.36
-        return [QPointF(cx, 22), QPointF(cx - r * 1.1, H - 46), QPointF(cx + r * 1.1, H - 46)]
+        cx, r = W / 2, min(W, H) * 0.34
+        return [QPointF(cx, 22), QPointF(cx - r * 1.15, H - 70), QPointF(cx + r * 1.15, H - 70)]
 
     def paintEvent(self, e):
         p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
         pts = self._nodes()
         ok = 0
-        for i, j in ((0, 1), (1, 2), (0, 2)):
-            good = self.s[i] != self.s[j]
+        for (i, j), J in zip(self.EDGES, self.J):
+            good = J * self.s[i] * self.s[j] > 0
             ok += good
-            pen = QPen(QColor(theme.ACCENT_2), 3 if good else 2, Qt.SolidLine if good else Qt.DashLine)
-            p.setPen(pen); p.drawLine(pts[i], pts[j])
+            col = QColor(theme.ACCENT if J > 0 else theme.ACCENT_2)
+            p.setPen(QPen(col, 3 if good else 2, Qt.SolidLine if good else Qt.DashLine)); p.drawLine(pts[i], pts[j])
             mid = (pts[i] + pts[j]) / 2
-            p.setPen(QPen(QColor(theme.ACCENT if good else theme.ACCENT_2), 1.5)); p.setBrush(QColor(theme.CARD))
-            p.drawEllipse(mid, 11, 11)
-            f = QFont(self.font()); f.setPixelSize(13); f.setBold(True); p.setFont(f)
-            p.drawText(QRectF(mid.x() - 11, mid.y() - 11, 22, 22), Qt.AlignCenter, "✓" if good else "✗")
+            p.setPen(QPen(col, 1.5)); p.setBrush(QColor(theme.CARD)); p.drawEllipse(mid, 12, 12)
+            f = QFont(self.font()); f.setPixelSize(15); f.setBold(True); p.setFont(f)
+            p.drawText(QRectF(mid.x() - 12, mid.y() - 12, 24, 24), Qt.AlignCenter, "=" if J > 0 else "≠")
         f = QFont(self.font()); f.setPixelSize(15); f.setBold(True); p.setFont(f)
         for q, v in zip(pts, self.s):
             p.setPen(QPen(QColor(theme.INK_3), 1)); p.setBrush(QColor(theme.SPIN_UP if v > 0 else theme.SPIN_DOWN))
             p.drawEllipse(q, 17, 17)
-            p.setPen(QColor("white" if v > 0 else theme.INK)); p.drawText(QRectF(q.x() - 17, q.y() - 17, 34, 34), Qt.AlignCenter, "+" if v > 0 else "−")
-        p.setPen(QColor(theme.INK_2)); f.setPixelSize(13); f.setBold(False); p.setFont(f)
+            p.setPen(QColor("white" if v > 0 else theme.INK))
+            p.drawText(QRectF(q.x() - 17, q.y() - 17, 34, 34), Qt.AlignCenter, "+" if v > 0 else "−")
+        f.setPixelSize(13); f.setBold(False); p.setFont(f); p.setPen(QColor(theme.INK_2))
+        best = 2 if self.frustrated() else 3
+        p.drawText(QRectF(0, self.height() - 44, self.width(), 20), Qt.AlignHCenter,
+                   f"satisfied links (solid): {ok} of 3" + ("  ·  the best possible" if ok == best else ""))
+        p.setPen(QColor(theme.ACCENT_2 if self.frustrated() else theme.ACCENT))
+        sign = "−" if self.frustrated() else "+"
         p.drawText(QRectF(0, self.height() - 22, self.width(), 20), Qt.AlignHCenter,
-                   f"satisfied links (✓): {ok} of 3" + ("  ·  the best possible" if ok == 2 else ""))
+                   f"product of the signs around the loop: {sign}1  →  "
+                   + ("frustrated: at most 2 of 3" if self.frustrated() else "not frustrated: all 3 can be satisfied"))
         p.end()
 
     def mousePressEvent(self, e):

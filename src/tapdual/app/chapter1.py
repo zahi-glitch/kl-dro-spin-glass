@@ -189,8 +189,17 @@ class SKPage(QWidget):
         controls = Card("Controls"); controls.add(self.temp); controls.add(buttons)
 
         puzzle = Card("Frustration in three spins",
-                      "Each pair wants to <b>disagree</b>. Click the spins to flip them: you can never satisfy all three links.")
-        puzzle.add(FrustrationTriangle())
+                      f"<span style='color:{theme.ACCENT}'><b>=</b></span> the pair wants to agree, "
+                      f"<span style='color:{theme.ACCENT_2}'><b>≠</b></span> it wants to disagree; the signs are random. "
+                      "Click the spins to flip them and try to satisfy every link.")
+        self.triangle = FrustrationTriangle()
+        puzzle.add(self.triangle)
+        tri_btn = QPushButton("New random signs"); tri_btn.clicked.connect(self.triangle.randomize)
+        puzzle.add(tri_btn)
+        puzzle.add(label("Two ingredients make a spin glass: <b>disorder</b> (random signs) and <b>frustration</b> "
+                         "(loops whose signs multiply to −1, about half of them here). All '≠' on a triangle would "
+                         "also be frustrated, but without randomness: that is an antiferromagnet on a triangular "
+                         "lattice, not a glass.", "small"))
 
         self.readout = label("", "body")
         explain = Card("What to look for")
