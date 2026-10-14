@@ -9,10 +9,10 @@ from .widgets import Card, label
 
 READING = {
     "statmech": [
-        ("A. Bovier", "Principles of statistical mechanics",
-         "Chapter 2 of Statistical Mechanics of Disordered Systems: A Mathematical Perspective, Cambridge University "
-         "Press, 2006",
-         "Gibbs measures, free energy and the thermodynamic limit, stated precisely and briefly."),
+        ("A. Bovier", "Statistical Mechanics of Disordered Systems: A Mathematical Perspective",
+         "Cambridge Series in Statistical and Probabilistic Mathematics, Cambridge University Press, 2006",
+         "the whole path of this app in one monograph: Gibbs measures, Curie–Weiss, the REM and GREM, SK and the "
+         "Hopfield model."),
         ("S. Friedli, Y. Velenik", "Statistical Mechanics of Lattice Systems: A Concrete Mathematical Introduction",
          "Cambridge University Press, 2017, Chapter 1",
          "an intuitive first contact with the subject."),
