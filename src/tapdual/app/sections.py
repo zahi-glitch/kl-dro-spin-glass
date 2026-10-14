@@ -1,31 +1,45 @@
-"""The educational sections, ordered from order to disorder:
-free energy -> Curie-Weiss -> Hopfield -> REM."""
+"""Section scaffolding (header, story bridge) and the Curie–Weiss and Hopfield sections."""
 from __future__ import annotations
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import (QFrame, QGridLayout, QHBoxLayout, QPushButton, QStackedWidget, QVBoxLayout,
+                               QWidget)
 
 from .. import spinglass as sg
 from . import theme
-from .chapter1 import HopfieldPage, REMPage, _column, _two_columns
+from .chapter1 import HopfieldPage, _column, _two_columns
 from .chapter3 import RBMPage
 from .widgets import Card, Deeper, LabeledSlider, Practice, Segmented, SpinGrid, label
 
 
-def section_header(lay, number: str, title: str, lead: str) -> None:
+def bridge(previously: str, now: str, question: str) -> QWidget:
+    """The thread of the story: what we saw, what changes now, and the question this section answers."""
+    box = QFrame(); box.setObjectName("bridge")
+    lay = QGridLayout(box); lay.setContentsMargins(16, 12, 16, 12); lay.setHorizontalSpacing(14); lay.setVerticalSpacing(4)
+    for r, (tag, text) in enumerate((("SO FAR", previously), ("NOW", now), ("QUESTION", question))):
+        t = label(tag, "tag"); t.setFixedWidth(78)
+        lay.addWidget(t, r, 0, Qt.AlignTop)
+        lay.addWidget(label(f"<b>{text}</b>" if tag == "QUESTION" else text, "body"), r, 1)
+    lay.setColumnStretch(1, 1)
+    return box
+
+
+def section_header(lay, number: str, title: str, lead: str, story=None) -> None:
     lay.addWidget(label(f"SECTION {number}", "eyebrow"))
     lay.addWidget(label(title, "title"))
+    if story:
+        lay.addWidget(bridge(*story))
     lay.addWidget(label(lead, "lead"))
 
 
 class Section(QWidget):
-    def __init__(self, number, title, lead):
+    def __init__(self, number, title, lead, story=None):
         super().__init__()
         self.setObjectName("page")
         self.lay = QVBoxLayout(self); self.lay.setContentsMargins(28, 24, 28, 24); self.lay.setSpacing(12)
-        section_header(self.lay, number, title, lead)
+        section_header(self.lay, number, title, lead, story)
 
 
 # --------------------------------------------------------------------------- Curie-Weiss
@@ -34,11 +48,15 @@ class CurieWeissSection(Section):
 
     def __init__(self):
         super().__init__(
-            "2", "Curie–Weiss: everyone agrees",
-            "The simplest collective behaviour. Every [[spin]] σ<sub>i</sub> = ±1 feels the average of all the others, "
-            "so the only thing that matters is the [[magnetisation]] m = (1/N) Σ<sub>i</sub> σ<sub>i</sub>. Below a critical "
-            "temperature the system picks a side on its own: a [[phase-transition|phase transition]]. Its "
-            "[[free-energy|free energy]] is a supremum over one number, m.")
+            "2", "Order: the Curie–Weiss model",
+            story=("A statistical-mechanics system is many ±1 parts, an energy that scores configurations, and noise "
+                   "(temperature). We predict probabilities and a few summary numbers.",
+                   "The simplest possible rule: every spin wants to agree with every other spin, equally.",
+                   "Can a crowd make up its mind on its own, with nobody in charge?"),
+            lead="The simplest collective behaviour. Every [[spin]] σ<sub>i</sub> = ±1 feels the average of all the others, "
+            "so the only thing that matters is the [[magnetisation]] m = (1/N) Σ<sub>i</sub> σ<sub>i</sub>. The answer is "
+            "<b>yes</b>: below a critical temperature the crowd picks a side on its own, a "
+            "[[phase-transition|phase transition]]. Its [[free-energy|free energy]] is a supremum over one number, m.")
         self.rng = np.random.default_rng()
         self.s = self.rng.choice([-1.0, 1.0], sg.N_SPINS)
         self.hist_t, self.hist_m, self.t = [], [], 0.0
@@ -254,8 +272,11 @@ class CapacityPage(QWidget):
 class HopfieldSection(Section):
     def __init__(self):
         super().__init__(
-            "3", "Hopfield: between order and glass",
-            "Store memories in the couplings and each memory becomes a valley. With one memory the "
+            "4", "Memory: Hopfield networks",
+            story=("Random couplings (spin glasses) create a rugged landscape with many valleys, but nobody chose them.",
+                   "Choose the couplings on purpose, with Hebb's rule, so that the valleys are memories you picked.",
+                   "Can a physical system store information and retrieve it from a fragment?"),
+            lead="Store memories in the couplings and each memory becomes a valley. With one memory the "
             "[[hopfield|Hopfield model]] is the [[curie-weiss|Curie–Weiss]] magnet in disguise; with many it becomes a "
             "[[spin-glass|spin glass]]. In between, it is a working memory, and a machine-learning model.")
         self.seg = Segmented(["Memory", "= Boltzmann machine", "How much can it remember?"])
@@ -265,14 +286,3 @@ class HopfieldSection(Section):
             self.stack.addWidget(p)
         self.lay.addWidget(self.stack, 1)
         self.seg.changed.connect(self.stack.setCurrentIndex)
-
-
-class REMSection(Section):
-    def __init__(self):
-        super().__init__(
-            "4", "REM: extreme disorder",
-            "At the other end of the scale: forget the couplings and give every configuration its own independent "
-            "random energy. Derrida's Random Energy Model ([[rem|REM]]) is the simplest [[spin-glass|spin glass]]. It "
-            "<b>freezes</b>, and the reason is a budget: there are only 2<sup>N</sup> configurations, so the "
-            "[[entropy]] cannot exceed log 2 per spin.")
-        self.lay.addWidget(REMPage(), 1)

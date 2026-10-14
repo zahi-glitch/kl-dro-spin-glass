@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtCore import QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QPainter
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy,
                                QSlider, QVBoxLayout, QWidget)
 
@@ -252,6 +252,49 @@ class Segmented(QWidget):
         for i, b in enumerate(self.buttons):
             b.setChecked(i == k)
         self.changed.emit(k)
+
+
+class FrustrationTriangle(QWidget):
+    """Three spins, every pair wants to disagree. Click a spin to flip it; at most two links are satisfied."""
+
+    def __init__(self):
+        super().__init__()
+        self.s = [1, 1, 1]
+        self.setFixedHeight(190); self.setCursor(Qt.PointingHandCursor)
+
+    def _nodes(self):
+        W, H = self.width(), self.height()
+        cx, r = W / 2, min(W, H) * 0.36
+        return [QPointF(cx, 22), QPointF(cx - r * 1.1, H - 46), QPointF(cx + r * 1.1, H - 46)]
+
+    def paintEvent(self, e):
+        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
+        pts = self._nodes()
+        ok = 0
+        for i, j in ((0, 1), (1, 2), (0, 2)):
+            good = self.s[i] != self.s[j]
+            ok += good
+            pen = QPen(QColor(theme.ACCENT_2), 3 if good else 2, Qt.SolidLine if good else Qt.DashLine)
+            p.setPen(pen); p.drawLine(pts[i], pts[j])
+            mid = (pts[i] + pts[j]) / 2
+            p.setPen(QPen(QColor(theme.ACCENT if good else theme.ACCENT_2), 1.5)); p.setBrush(QColor(theme.CARD))
+            p.drawEllipse(mid, 11, 11)
+            f = QFont(self.font()); f.setPixelSize(13); f.setBold(True); p.setFont(f)
+            p.drawText(QRectF(mid.x() - 11, mid.y() - 11, 22, 22), Qt.AlignCenter, "✓" if good else "✗")
+        f = QFont(self.font()); f.setPixelSize(15); f.setBold(True); p.setFont(f)
+        for q, v in zip(pts, self.s):
+            p.setPen(QPen(QColor(theme.INK_3), 1)); p.setBrush(QColor(theme.SPIN_UP if v > 0 else theme.SPIN_DOWN))
+            p.drawEllipse(q, 17, 17)
+            p.setPen(QColor("white" if v > 0 else theme.INK)); p.drawText(QRectF(q.x() - 17, q.y() - 17, 34, 34), Qt.AlignCenter, "+" if v > 0 else "−")
+        p.setPen(QColor(theme.INK_2)); f.setPixelSize(13); f.setBold(False); p.setFont(f)
+        p.drawText(QRectF(0, self.height() - 22, self.width(), 20), Qt.AlignHCenter,
+                   f"satisfied links (✓): {ok} of 3" + ("  ·  the best possible" if ok == 2 else ""))
+        p.end()
+
+    def mousePressEvent(self, e):
+        for k, q in enumerate(self._nodes()):
+            if (e.position() - q).manhattanLength() < 30:
+                self.s[k] *= -1; self.update(); return
 
 
 def hline() -> QFrame:

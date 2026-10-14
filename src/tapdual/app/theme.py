@@ -28,6 +28,7 @@ QLabel#small {{ font-size: 12px; color: {INK_3}; }}
 QLabel#value {{ font-size: 22px; font-weight: 600; }}
 QFrame#card {{ background: {CARD}; border: 1px solid {BORDER}; border-radius: 12px; }}
 QFrame#practice {{ background: {ACCENT_SOFT}; border: 1px solid #cddff5; border-radius: 12px; }}
+QFrame#bridge {{ background: {CARD}; border: 1px solid {BORDER}; border-left: 4px solid {ACCENT}; border-radius: 0px; }}
 QLabel#tag {{ font-size: 11px; letter-spacing: 1px; color: {ACCENT}; font-weight: 600; }}
 QListWidget#nav {{
   background: {BG}; border: none; outline: none; padding: 8px 4px; font-size: 14px;

@@ -1,4 +1,4 @@
-"""Live model pages: Hopfield memory, REM freezing (and an SK page kept for reference, not shown)."""
+"""Live model pages: Hopfield memory, SK frustration, REM freezing."""
 from __future__ import annotations
 
 import numpy as np
@@ -9,7 +9,8 @@ from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QPushButton, QStackedWi
 
 from .. import spinglass as sg
 from . import theme
-from .widgets import Card, Deeper, LabeledSlider, OverlapBars, Practice, Segmented, SpinGrid, label
+from .widgets import (Card, Deeper, FrustrationTriangle, LabeledSlider, OverlapBars, Practice, Segmented,
+                      SpinGrid, label)
 
 
 def _two_columns(left: QWidget, right: QWidget) -> QWidget:
@@ -160,7 +161,7 @@ class SKPage(QWidget):
         gl.addWidget(label("copy a", "small"), 1, 0, Qt.AlignHCenter); gl.addWidget(label("copy b", "small"), 1, 1, Qt.AlignHCenter)
         replicas = Card("Two copies, same random couplings",
                         "Started from different random states and cooled at the same temperature. "
-                        "There is no image to find: just many valleys of similar depth.")
+                        "There is no hidden picture to find: just many valleys of similar depth.")
         replicas.add(grids, 1)
 
         self.plot_e = pg.PlotWidget(); theme.style_plot(self.plot_e.getPlotItem(), "time (sweeps)", "energy per spin")
@@ -179,40 +180,47 @@ class SKPage(QWidget):
                        f"<span style='color:{theme.ACCENT_2}'>━</span> copy b", "small")
         traces.add(legend); traces.add(self.plot_e); traces.add(self.plot_q)
 
-        self.temp = LabeledSlider("Temperature T", 0.1, 2.0, 0.4, 190,
-                                  hint="Above T = 1 the system is a paramagnet; below, it is a spin glass.")
+        self.temp = LabeledSlider("Temperature T = 1/β", 0.1, 2.0, 0.4, 190,
+                                  hint="Above T = 1 the spins fluctuate freely (paramagnet); below, they freeze into a glass.")
         buttons = QWidget(); bl = QHBoxLayout(buttons); bl.setContentsMargins(0, 4, 0, 0)
         self.run_btn = QPushButton("Cool from random  ▶"); self.run_btn.setObjectName("primary")
         self.new_btn = QPushButton("New couplings")
         bl.addWidget(self.run_btn); bl.addWidget(self.new_btn); bl.addStretch(1)
         controls = Card("Controls"); controls.add(self.temp); controls.add(buttons)
+
+        puzzle = Card("Frustration in three spins",
+                      "Each pair wants to <b>disagree</b>. Click the spins to flip them: you can never satisfy all three links.")
+        puzzle.add(FrustrationTriangle())
+
         self.readout = label("", "body")
         explain = Card("What to look for")
-        explain.add(label("Random couplings J<sub>ij</sub> ask some pairs to agree and others to disagree, and no state "
-                          "satisfies them all: <b>frustration</b>. Both copies reach nearly the same low energy, "
-                          "yet they usually end in <b>different valleys</b>: their overlap q stays well below 1 and "
-                          "changes from run to run. Parisi's theory is a theory of the distribution of q.", "body"))
+        explain.add(label("In the Sherrington–Kirkpatrick ([[sk|SK]]) model every pair of spins gets its own random "
+                          "coupling J<sub>ij</sub>: some pairs want to agree, others to disagree. Like the triangle, no "
+                          "configuration satisfies them all. The landscape becomes rugged: two copies cooled the same way "
+                          "reach almost the same low energy, yet usually land in <b>different valleys</b>. Their "
+                          "[[overlap]] q stays well below 1 and changes from run to run.", "body"))
         explain.add(self.readout)
         explain.add(Deeper(
-            "H(s) = −Σ<sub>i&lt;j</sub> J<sub>ij</sub> s<sub>i</sub> s<sub>j</sub>, J<sub>ij</sub> ~ N(0, 1/N) independent. "
-            "Overlap q<sub>ab</sub> = (1/N) Σ<sub>i</sub> s<sub>i</sub><sup>a</sup> s<sub>i</sub><sup>b</sup>. "
-            "For T &gt; 1 the free energy is log 2 + β²/4 (annealed); below T = 1 replica symmetry breaks and the "
-            "free energy is given by the Parisi formula, an infimum over a functional order parameter "
-            "(Guerra; Talagrand). The minimum energy per spin tends to −0.7633. With N = 256 the run here is a small, "
-            "honest finite-size picture, not the limit."))
+            "Energy H(σ) = −Σ<sub>i&lt;j</sub> J<sub>ij</sub> σ<sub>i</sub> σ<sub>j</sub> with J<sub>ij</sub> ~ N(0, 1/N) independent. "
+            "Overlap of two copies q = (1/N) Σ<sub>i</sub> σ<sub>i</sub><sup>a</sup> σ<sub>i</sub><sup>b</sup>. "
+            "For T &gt; 1 the free energy is log 2 + β²/4; below T = 1 [[rsb|replica symmetry breaks]] and the free energy "
+            "is the [[parisi|Parisi formula]], an <b>infimum</b> over a functional order parameter (proved by Guerra and "
+            "Talagrand). The lowest energy per spin tends to −0.7633. With N = 256 this run is a small, honest "
+            "finite-size picture, not the limit."))
 
         self.practice_readout = label("", "body")
-        practice = Practice(
-            "Many good answers that look nothing alike", body=
-            "Minimising this energy is a <b>Max-Cut</b> problem: split 256 nodes into two groups so that the "
-            "total weight of the links you cut (with weights −J<sub>ij</sub>) is as large as possible. Problems of "
-            "this kind (scheduling, chip layout, portfolio selection with pairwise interactions) are routinely "
-            "written as Ising energies, and Ising machines and quantum annealers are built to minimise them. "
-            "The glass teaches the key practical lesson: there are many near-optimal solutions that are "
-            "<b>very different</b> from each other.")
-        practice.add(self.practice_readout)
+        practice = Practice("Is there one best way to split a network in two?", rows=[
+            ("The problem", "<b>Max-Cut</b>: split the nodes of a weighted network into two groups so that the total "
+                            "weight of the links between the groups is as large as possible. With weights −J<sub>ij</sub>, "
+                            "this is exactly finding the lowest energy of the SK model."),
+            ("Where it appears", "Chip layout, clustering, scheduling, portfolio selection with pairwise effects. "
+                                 "Ising machines and quantum annealers are built to minimise such energies."),
+            ("Live", self.practice_readout),
+            ("Lesson", "No: there are <b>many</b> near-optimal splits that look nothing alike. An algorithm that returns "
+                       "'the' answer is picking one valley among many."),
+        ])
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0)
-        lay.addWidget(_two_columns(_column(replicas, traces), _column(controls, explain, practice)))
+        lay.addWidget(_two_columns(_column(replicas, traces), _column(puzzle, controls, explain, practice)))
 
         self.timer = QTimer(self); self.timer.setInterval(1000 // self.FPS); self.timer.timeout.connect(self.tick)
         self.run_btn.clicked.connect(self.restart)
@@ -335,7 +343,12 @@ class REMPage(QWidget):
             ("Lesson", "Below a critical temperature the choice <b>freezes</b> onto a handful of tokens: the REM "
                        "transition at β<sub>c</sub> = √(2 log 2), in this model's scaling."),
         ])
-        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0)
+        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(12)
+        lay.addWidget(label(
+            "Push disorder to the limit: forget couplings and give every configuration its own independent random "
+            "energy. Derrida's Random Energy Model ([[rem|REM]]) is the simplest spin glass. It <b>freezes</b>, and the "
+            "reason is a budget: there are only 2<sup>N</sup> configurations, so the [[entropy]] cannot exceed "
+            "log 2 per spin. When the budget runs out, the probability piles up on a handful of states.", "body"))
         lay.addWidget(_two_columns(_column(weights, entropy), _column(controls, stats, practice, explain)))
         self.beta.changed.connect(lambda _: self.refresh())
         self.new_btn.clicked.connect(self.new_sample)

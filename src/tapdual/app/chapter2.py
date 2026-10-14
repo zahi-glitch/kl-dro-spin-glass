@@ -15,18 +15,23 @@ from ..spinglass import ENERGIES, boltzmann, log_Z, terms
 class Chapter2(QWidget):
     TITLE = "Free energy is an optimisation"
 
-    def __init__(self):
+    def __init__(self, header: bool = True):
         super().__init__()
-        self.setObjectName("page")
         self.ts = np.linspace(0, 4, 161)
 
-        lay = QVBoxLayout(self); lay.setContentsMargins(28, 24, 28, 24); lay.setSpacing(12)
-        lay.addWidget(label("SECTION 1", "eyebrow"))
-        lay.addWidget(label(self.TITLE, "title"))
+        lay = QVBoxLayout(self); lay.setSpacing(12)
+        if header:
+            self.setObjectName("page")
+            lay.setContentsMargins(28, 24, 28, 24)
+            lay.addWidget(label("SECTION 1", "eyebrow"))
+            lay.addWidget(label(self.TITLE, "title"))
+        else:
+            lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(label("Nature does not compute partition functions: it <b>optimises</b>. Among all ways of spreading "
                             "probability over the states, the [[gibbs|Gibbs distribution]] is the one that best balances "
                             "low [[energy|energy]] against high [[entropy]], and the best value it reaches is the "
-                            "[[free-energy|free energy]] log Z. Every model in the next sections is an instance of this.", "lead"))
+                            "[[free-energy|free energy]] log Z. Every model in the next sections is an instance of this.",
+                            "lead" if header else "body"))
         lay.addWidget(label("<b>The setting.</b> A toy system with n = 10 states σ = 1, …, 10 and [[energy|energies]] H(σ). "
                             "β = 1/T is the [[temperature|inverse temperature]]. A <i>trial distribution</i> ν is any "
                             "probability vector on the states; its [[entropy]] is Ent(ν) = −Σ ν(σ) log ν(σ). The "

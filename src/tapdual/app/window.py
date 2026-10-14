@@ -1,21 +1,20 @@
-"""Main window: chapter list on the left, the current chapter on the right."""
+"""Main window: the story path on the left, the current section on the right."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMainWindow,
-                               QScrollArea, QStackedWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QListWidget, QListWidgetItem, QMainWindow, QScrollArea, QStackedWidget,
+                               QHBoxLayout, QVBoxLayout, QWidget)
 
-from . import theme
-from .chapter2 import Chapter2
-from .sections import CurieWeissSection, HopfieldSection, REMSection
+from .sections import CurieWeissSection, HopfieldSection
+from .story import DisorderSection, StatMechSection
 from .widgets import GlossaryDialog, label, set_glossary_opener
 
 CHAPTERS = [
-    ("1", "Free energy is an optimisation", Chapter2),
-    ("2", "Curie–Weiss: everyone agrees", CurieWeissSection),
-    ("3", "Hopfield: memories", HopfieldSection),
-    ("4", "REM: extreme disorder", REMSection),
-    ("5", "Robust optimisation", None),
+    ("1", "What is a statistical-mechanics system?", StatMechSection),
+    ("2", "Order: Curie–Weiss", CurieWeissSection),
+    ("3", "Disorder: spin glasses", DisorderSection),
+    ("4", "Memory: Hopfield networks", HopfieldSection),
+    ("5", "Robust decisions", None),
 ]
 
 
@@ -24,7 +23,7 @@ class Placeholder(QWidget):
         super().__init__()
         self.setObjectName("page")
         lay = QVBoxLayout(self); lay.setContentsMargins(28, 24, 28, 24)
-        lay.addWidget(label(f"CHAPTER {number}", "eyebrow")); lay.addWidget(label(title, "title"))
+        lay.addWidget(label(f"SECTION {number}", "eyebrow")); lay.addWidget(label(title, "title"))
         lay.addWidget(label("Coming next.", "lead")); lay.addStretch(1)
 
 
@@ -36,8 +35,8 @@ class MainWindow(QMainWindow):
 
         side = QWidget(); side.setFixedWidth(290)
         sl = QVBoxLayout(side); sl.setContentsMargins(16, 24, 8, 16); sl.setSpacing(6)
-        sl.addWidget(label("FREE ENERGY ↔ ROBUST OPTIMISATION", "eyebrow"))
-        sl.addWidget(label("From spin glasses to worst-case decisions", "h2"))
+        sl.addWidget(label("STATISTICAL MECHANICS ↔ ROBUST OPTIMISATION", "eyebrow"))
+        sl.addWidget(label("From crowds and memories to worst-case decisions", "h2"))
         self.nav = QListWidget(); self.nav.setObjectName("nav")
         self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff); self.nav.setWordWrap(True)
         for number, title, cls in CHAPTERS:
