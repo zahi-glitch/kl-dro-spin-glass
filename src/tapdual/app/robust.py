@@ -7,10 +7,12 @@ Tab 2, nonlinear risk (mean–variance): the concave non-linearity turns the sup
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QRect, QSize, Qt, QTimer
+from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 from .. import Quadrature, mean_variance_model, solve_dual, solve_primal
@@ -315,6 +317,125 @@ class NonlinearPage(QWidget):
         self.status.setText(f"sup over ν (solved directly) = inf over (q, m), up to {gap:.0e}.")
 
 
+# --------------------------------------------------------------------------- tab 4: case study on real data
+RESULTS = Path(__file__).resolve().parents[3] / "results" / "backtest"
+
+
+class Picture(QWidget):
+    """An image that scales to the available width and keeps its aspect ratio."""
+
+    def __init__(self, path):
+        super().__init__()
+        self.pm = QPixmap(str(path))
+        sp = self.sizePolicy(); sp.setHeightForWidth(True); self.setSizePolicy(sp)
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, w):
+        return int(w * self.pm.height() / max(self.pm.width(), 1))
+
+    def sizeHint(self):
+        return QSize(600, self.heightForWidth(600))
+
+    def paintEvent(self, e):
+        p = QPainter(self); p.setRenderHint(QPainter.SmoothPixmapTransform)
+        w = self.width(); h = self.heightForWidth(w)
+        p.drawPixmap(QRect(0, 0, w, h), self.pm); p.end()
+
+
+def _big(value, caption) -> QWidget:
+    w = QWidget(); l = QVBoxLayout(w); l.setContentsMargins(0, 0, 0, 0); l.setSpacing(0)
+    v = label(value, "value"); v.setStyleSheet(f"font-size: 30px; color: {theme.ACCENT};")
+    l.addWidget(v); l.addWidget(label(caption, "small"))
+    return w
+
+
+class CaseStudyPage(QWidget):
+    COLUMNS = (("annual return", "return / year", True), ("annual volatility", "volatility", True),
+               ("Sharpe (rf = 0)", "Sharpe", False), ("max drawdown", "max drawdown", True),
+               ("turnover / rebalance", "turnover", False))
+
+    def __init__(self):
+        super().__init__()
+        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(12)
+        path = RESULTS / "results.json"
+        if not path.exists():
+            lay.addWidget(label("No results yet. Run <b>python scripts/backtest.py</b> in the project folder "
+                                "(about 8 minutes) and reopen the app.", "body"))
+            return
+        import json
+        res = json.loads(path.read_text())
+        M, S = res["metrics"], res["speed"]
+        names = list(M)
+        robust, mark, eq = names[3], names[1], names[0]
+        speedup = S["backtest_conic_s"] / S["backtest_dual_s"]
+
+        lay.addWidget(label(
+            f"Everything so far used one sample of returns. Here the robust portfolio meets real data: daily prices "
+            f"of {len(res['universe'])} US stocks, {res['period'][0][:4]}–{res['period'][1][:4]} out of sample, "
+            f"through the dot-com crash and 2008. Every month each strategy is re-estimated on the last two years, "
+            f"long-only, paying 0.1% on what it trades. All settings were fixed before looking at the results "
+            f"(γ = {res['gamma']}, ρ = {res['rho']}).", "body"))
+
+        head = Card("In three numbers")
+        row = QWidget(); rl = QHBoxLayout(row); rl.setContentsMargins(0, 4, 0, 4); rl.setSpacing(28)
+        rl.addWidget(_big(f"{speedup:.0f}×", f"faster with the Parisi-type dual than with a generic solver,<br>"
+                                             f"same portfolios (weights differ ≤ {S['max_weight_difference']:.0e})"))
+        rl.addWidget(_big(f"{100 * M[robust]['max drawdown']:.0f}%",
+                          f"worst fall from a peak, against {100 * M[mark]['max drawdown']:.0f}% (Markowitz)<br>"
+                          f"and {100 * M[eq]['max drawdown']:.0f}% (equal weight)"))
+        rl.addWidget(_big(f"{100 * M[robust]['annual volatility']:.1f}%",
+                          f"volatility, against {100 * M[mark]['annual volatility']:.1f}% (Markowitz)<br>"
+                          f"and {100 * M[eq]['annual volatility']:.1f}% (equal weight)"))
+        rl.addStretch(1)
+        head.add(row)
+
+        speed = Card("Why the dual matters in practice: speed",
+                     "Left: time for one worst case as the data window grows. Right: the same robust backtest "
+                     f"({S['rebalances']} monthly rebalances) computed twice: "
+                     f"{S['backtest_dual_s']:.1f} s with the dual, {S['backtest_conic_s']:.0f} s with CVXPY + Clarabel.")
+        speed.add(Picture(RESULTS / "speed.png"))
+
+        table = Card("Results, 1992–2018")
+        grid = QWidget(); g = QGridLayout(grid); g.setContentsMargins(0, 0, 0, 0); g.setHorizontalSpacing(18)
+        g.addWidget(label("<b>strategy</b>", "small"), 0, 0)
+        for c, (_, title, _) in enumerate(self.COLUMNS, 1):
+            g.addWidget(label(f"<b>{title}</b>", "small", wrap=False), 0, c, Qt.AlignRight)
+        for r, name in enumerate(names, 1):
+            bold = name == robust
+            short = name.replace(" (KSS23 dual)", "").replace(" (EVaR)", " (EVaR)")
+            g.addWidget(label(f"<b>{short}</b>" if bold else short, "body", wrap=False), r, 0)
+            for c, (key, _, pct) in enumerate(self.COLUMNS, 1):
+                v = M[name][key]
+                txt = f"{100 * v:.1f}%" if pct else f"{v:.2f}"
+                g.addWidget(label(f"<b>{txt}</b>" if bold else txt, "body", wrap=False), r, c, Qt.AlignRight)
+        g.setColumnStretch(0, 1)
+        table.add(grid)
+        for crisis, vals in res["crises"].items():
+            table.add(label(f"<b>{crisis}:</b> " + ", ".join(f"{k.split(' (')[0]} {100 * v:+.0f}%" for k, v in vals.items()),
+                            "small"))
+
+        wealth = Card("Wealth and drawdown", "Log scale. The robust portfolios fall less in both crashes.")
+        wealth.add(Picture(RESULTS / "equity.png"))
+
+        practice = Practice("What would I tell a portfolio manager?", rows=[
+            ("Result", f"The robust portfolio gives up {100 * (M[eq]['annual return'] - M[robust]['annual return']):.1f}–"
+                       f"{100 * (M[mark]['annual return'] - M[robust]['annual return']):.1f} points of return a year "
+                       "for about a fifth less volatility, a much smaller worst fall and half the trading."),
+            ("Bonus", "It does not need a carefully tuned risk aversion: its risk barely moves when γ changes, "
+                      "while Markowitz swings from 29% to 17% volatility."),
+            ("Where the maths helps", "The worst case is an inf over two numbers (q, m) instead of a sup over "
+                                      "504 day-weights: exact, and fast enough to run inside the optimiser."),
+            ("Honest limits", "Here the mean–variance version behaves like the simpler robust mean (EVaR); its "
+                              "edge is computational. Survivorship bias (well-known stocks), zero risk-free rate, "
+                              "one dataset."),
+        ])
+        lay.addWidget(head)
+        lay.addWidget(speed)
+        lay.addWidget(_two_columns(_column(wealth), _column(table, practice)))
+
+
 # --------------------------------------------------------------------------- section
 class RobustSection(Section):
     def __init__(self):
@@ -328,10 +449,12 @@ class RobustSection(Section):
                    "log 2 runs out and the measure freezes (section 3).",
                    "Read ν as an adversary who may reweight your data within a budget H(ν | μ) ≤ ρ.",
                    "How bad can things get if the data are slightly wrong, and what plays the role of temperature?"))
-        self.seg = Segmented(["Worst case in a KL ball", "Nonlinear risk: the sup becomes an inf", "Dictionary"])
+        self.seg = Segmented(["Worst case in a KL ball", "Nonlinear risk: the sup becomes an inf", "Dictionary",
+                              "Case study: real data"])
         self.lay.addWidget(self.seg)
         self.stack = FitStack()
         self.stack.addWidget(LinearPage()); self.stack.addWidget(NonlinearPage()); self.stack.addWidget(self._dictionary())
+        self.stack.addWidget(CaseStudyPage())
         self.stack.setCurrentIndex(0)
         self.lay.addWidget(self.stack)
         self.seg.changed.connect(self.stack.setCurrentIndex)

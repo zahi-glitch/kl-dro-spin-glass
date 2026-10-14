@@ -20,9 +20,9 @@ A walk-forward backtest on real daily prices of 10 US stocks (1990–2018, inclu
 crash and 2008). Every month each strategy is re-estimated on the last two years of returns,
 long-only, with 10 bps transaction costs. All parameters were fixed before looking at results.
 
-**Headline: the Parisi-type dual makes the robust portfolio 60× faster to compute.** The same
-robust mean–variance backtest takes 1.1 s with the dual and 69 s with a generic conic solver
-(CVXPY + Clarabel), and returns the same portfolios (weights differ by at most 10⁻⁴). One worst case
+**Headline: the Parisi-type dual makes the robust portfolio 60–70× faster to compute.** The same
+robust mean–variance backtest takes about 1 s with the dual and about 67 s with a generic conic solver
+(CVXPY + Clarabel; timings vary a little between runs), and returns the same portfolios (weights differ by at most 10⁻⁴). One worst case
 costs a few milliseconds whatever the window length; the conic solver slows down from 7 ms to 1.4 s
 as the window grows to 16 years, and occasionally fails to converge.
 

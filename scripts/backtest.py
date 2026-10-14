@@ -21,6 +21,7 @@ from tapdual.backtest import FULL_HISTORY, Strategy, backtest, load_prices, simp
 from tapdual.dro import worst_case_mean_variance
 
 OUT = Path(__file__).resolve().parents[1] / "results" / "backtest"
+SPEED: dict = {}   # filled by speed_study, saved to results.json for the app
 GAMMA, RHO, TAU = 0.05, 0.05, 0.1
 
 MAIN = [
@@ -43,6 +44,11 @@ def table(results) -> str:
     for r in results:
         lines.append(f"| {r.strategy.name} | " + " | ".join(fmt(k, r.metrics[k]) for k in keys) + " |")
     return "\n".join(lines)
+
+
+def crisis_return(r, start, end) -> float:
+    s = (r.dates >= np.datetime64(start)) & (r.dates <= np.datetime64(end))
+    return float(np.prod(1 + r.returns[s] / 100) - 1)
 
 
 def crisis(results, dates, start, end) -> str:
@@ -88,6 +94,9 @@ def speed_study(dates, R, reps=5, seed=0, rebalances=24) -> str:
     t = time.time(); b = backtest(Strategy("conic", "robust_mv_conic", gamma=GAMMA, rho=RHO, tau=TAU), D, RR)
     e_conic = time.time() - t
     wdiff = float(np.abs(a.weights - b.weights).max())
+    SPEED.update(days=list(ns), dual_ms=[1e3 * x for x in t_dual], conic_ms=[1e3 * x for x in t_conic],
+                 conic_failures=fails, reps=reps, backtest_dual_s=e_dual, backtest_conic_s=e_conic,
+                 rebalances=rebalances, max_weight_difference=wdiff)
 
     fig, ax = plt.subplots(1, 2, figsize=(9, 3.4), gridspec_kw={"width_ratios": [1.4, 1]})
     ax[0].loglog(ns, 1e3 * np.array(t_conic), "o-", color="#8a8983", label="generic conic solver (CVXPY + Clarabel)")
@@ -189,6 +198,15 @@ def main():
                    "## Sensitivity to the risk aversion γ", table(sens_gamma), "![sensitivity](sensitivity.png)"]
     report += ["## Speed: the dual against a generic conic solver", speed_study(dates, R)]
     (OUT / "summary.md").write_text("\n\n".join(report) + "\n")
+    crises = {name: {r.strategy.name: crisis_return(r, a_, b_) for r in results}
+              for name, a_, b_ in (("Dot-com crash 2000-02", "2000-03-24", "2002-10-09"),
+                                   ("Financial crisis 2007-09", "2007-10-09", "2009-03-09"))}
+    import json
+    (OUT / "results.json").write_text(json.dumps({
+        "period": [first, last], "universe": tickers, "gamma": GAMMA, "rho": RHO, "tau": TAU,
+        "window": 504, "step": 21, "cost_bps": 10,
+        "metrics": {r.strategy.name: r.metrics for r in results}, "crises": crises, "speed": SPEED,
+    }, indent=2))
     print(f"written to {OUT}")
 
 

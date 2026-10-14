@@ -1,0 +1,119 @@
+{
+  "period": [
+    "1991-12-31",
+    "2018-04-11"
+  ],
+  "universe": [
+    "AAPL",
+    "GE",
+    "AMD",
+    "WMT",
+    "BAC",
+    "T",
+    "XOM",
+    "BBY",
+    "PFE",
+    "JPM"
+  ],
+  "gamma": 0.05,
+  "rho": 0.05,
+  "tau": 0.1,
+  "window": 504,
+  "step": 21,
+  "cost_bps": 10,
+  "metrics": {
+    "Equal weight": {
+      "annual return": 0.18885540934530298,
+      "annual volatility": 0.22321108117966462,
+      "Sharpe (rf = 0)": 0.8868457813667726,
+      "max drawdown": -0.5781207969365416,
+      "worst day": -0.1071772745911956,
+      "CVaR 5% (daily)": 0.03178391760090492,
+      "turnover / rebalance": 0.0,
+      "effective holdings": 9.999999999999998
+    },
+    "Markowitz": {
+      "annual return": 0.20017207761438183,
+      "annual volatility": 0.21596570247848396,
+      "Sharpe (rf = 0)": 0.9531393453367362,
+      "max drawdown": -0.488519648171197,
+      "worst day": -0.09489205908560167,
+      "CVaR 5% (daily)": 0.030506022655993288,
+      "turnover / rebalance": 0.2831262162999616,
+      "effective holdings": 3.0659777460971513
+    },
+    "Robust mean (EVaR)": {
+      "annual return": 0.1751998653802307,
+      "annual volatility": 0.17875738114583029,
+      "Sharpe (rf = 0)": 0.9926939936911295,
+      "max drawdown": -0.3883499415408337,
+      "worst day": -0.09567140322201684,
+      "CVaR 5% (daily)": 0.02535506087063198,
+      "turnover / rebalance": 0.16126179265960996,
+      "effective holdings": 3.9918394418442413
+    },
+    "Robust mean-variance (KSS23 dual)": {
+      "annual return": 0.17179372217663702,
+      "annual volatility": 0.17449650006091322,
+      "Sharpe (rf = 0)": 0.9959845065496472,
+      "max drawdown": -0.3897118074004121,
+      "worst day": -0.09047459073985901,
+      "CVaR 5% (daily)": 0.024764143186743227,
+      "turnover / rebalance": 0.1399242309781764,
+      "effective holdings": 4.0581881644471665
+    }
+  },
+  "crises": {
+    "Dot-com crash 2000-02": {
+      "Equal weight": -0.39929504175169994,
+      "Markowitz": -0.4398313155828346,
+      "Robust mean (EVaR)": -0.30112420164993414,
+      "Robust mean-variance (KSS23 dual)": -0.2551402934317498
+    },
+    "Financial crisis 2007-09": {
+      "Equal weight": -0.5689702078912104,
+      "Markowitz": -0.38586512339090484,
+      "Robust mean (EVaR)": -0.38498188159170066,
+      "Robust mean-variance (KSS23 dual)": -0.38293589320490384
+    }
+  },
+  "speed": {
+    "days": [
+      126,
+      252,
+      504,
+      1008,
+      2016,
+      4032
+    ],
+    "dual_ms": [
+      1.654638000019304,
+      2.7906889999940176,
+      3.4707410000009986,
+      2.6440809999996873,
+      4.397691999997733,
+      7.8007299999853785
+    ],
+    "conic_ms": [
+      7.053866000006792,
+      20.613577999995414,
+      26.6892470000073,
+      42.48454399998991,
+      142.48115899999902,
+      1426.9881470000314
+    ],
+    "conic_failures": [
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "reps": 5,
+    "backtest_dual_s": 0.9581120014190674,
+    "backtest_conic_s": 67.28352236747742,
+    "rebalances": 24,
+    "max_weight_difference": 0.00010742615987663351
+  }
+}
