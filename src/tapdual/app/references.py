@@ -1,7 +1,7 @@
 """Further reading: at most three references per section, each with one line on why to read it.
 
 Entries are taken from the bibliography of the introduction to Sebastiani's thesis (2024), except
-Bolthausen–Sznitman (cited in KSS23) and Brock–Durlauf (the source of the Curie–Weiss market example).
+Brock–Durlauf (the source of the Curie–Weiss market example).
 """
 from __future__ import annotations
 
@@ -26,15 +26,13 @@ READING = {
          "the same equations as a model of peer effects and social tipping."),
     ],
     "disorder": [
-        ("D. Sherrington, S. Kirkpatrick", "Solvable model of a spin-glass",
-         "Phys. Rev. Lett. 35 (1975) 1792",
-         "where the SK model starts."),
-        ("B. Derrida", "Random-energy model: an exactly solvable model of disordered systems",
-         "Phys. Rev. B 24 (1981) 2613",
-         "the REM, freezing at β<sub>c</sub> = √(2 log 2), in a few pages."),
-        ("E. Bolthausen, A.-S. Sznitman", "Ten Lectures on Random Media",
-         "DMV Seminar 32, Birkhäuser, 2002",
-         "a mathematical tour of disordered systems, including REM-type models and Ruelle cascades."),
+        ("M. Mézard, G. Parisi, M. A. Virasoro",
+         "Spin Glass Theory and Beyond: An Introduction to the Replica Method and Its Applications",
+         "World Scientific, 1987",
+         "Parisi's theory from the source: replicas, symmetry breaking, the REM and the SK model."),
+        ("D. Panchenko", "The Sherrington–Kirkpatrick Model",
+         "Springer Monographs in Mathematics, Springer, 2013",
+         "the rigorous proof of the Parisi formula and ultrametricity, in one book."),
     ],
     "hopfield": [
         ("J. J. Hopfield", "Neural networks and physical systems with emergent collective computational abilities",
