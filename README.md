@@ -1,6 +1,6 @@
 # kl-dro-spin-glass
 
-KL-constrained DRO meets spin glasses: in REM-type approximations of TAP free energies, the Parisi formula is the Lagrangian dual of an entropy-constrained sup. Interactive dashboard on the entropy budget, convex reparametrisation and the phase transition, with a primal–dual numerical check.
+From statistical mechanics to robust optimisation. A desktop app that tells the story order → disorder → memory → decisions (Curie–Weiss, spin glasses, Hopfield), and a Python package showing that for REM-type approximations of TAP free energies the Parisi formula is the Lagrangian dual of a KL-constrained sup.
 
 > Status: work in progress, built step by step.
 
@@ -16,23 +16,27 @@ KL-constrained DRO meets spin glasses: in REM-type approximations of TAP free en
 
 ## Desktop app (work in progress)
 
-A local Mac/Linux/Windows app that tells the story from spin glasses to robust
-optimisation, chapter by chapter, with live simulations:
+A local Mac/Linux/Windows app that tells the story from statistical mechanics to
+robust optimisation, with live simulations:
 
 ```bash
 pip install -e ".[app]"        # adds PySide6, pyqtgraph and matplotlib
 python -m tapdual.app
 ```
 
-Sections, from order to disorder:
+Each section opens with what we saw so far, what changes now, and the question it answers:
 
-1. **Free energy is an optimisation**: energy against entropy, softmax, ELBO.
-2. **Curie–Weiss**: collective order, the free-energy landscape, hysteresis of adoption with peer effects.
-3. **Hopfield**: memory recall; the same network as a restricted Boltzmann machine; storage capacity and what is still open.
-4. **REM**: extreme disorder and freezing, the entropy budget.
-5. Robust optimisation (in progress).
+1. **What is a statistical-mechanics system?** Many simple parts, an energy, noise; Gibbs
+   probabilities and summary numbers; energy and entropy demos; free energy as an optimisation.
+2. **Order: Curie–Weiss.** A crowd makes up its mind on its own: phase transition, the
+   free-energy landscape, hysteresis of adoption with peer effects.
+3. **Disorder: spin glasses.** Random signs and frustration; SK (two replicas, Max-Cut) and the
+   REM (freezing, the entropy budget).
+4. **Memory: Hopfield networks.** Storage and retrieval; the same network as a restricted
+   Boltzmann machine; storage capacity and what is still open.
+5. **Robust decisions** (in progress).
 
-Blue words open a glossary entry with typeset formulas (rendered offline with matplotlib).
+Each section ends with two or three references for further reading. Blue words open a glossary entry with typeset formulas (rendered offline with matplotlib).
 
 ## Dashboard
 
