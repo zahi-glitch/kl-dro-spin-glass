@@ -21,7 +21,7 @@ def test_formulas_render(key):
 def test_links_resolve():
     used = set()
     for f in APP.glob("*.py"):
-        used |= set(re.findall(r"\[\[([a-z0-9\-]+)", f.read_text()))
+        used |= set(re.findall(r"\[\[([a-z0-9\-]+)(?:\|[^\]]+)?\]\]", f.read_text()))  # complete [[term|text]] links
     used.discard("term")  # the placeholder in docstrings
     assert used <= set(ENTRIES), used - set(ENTRIES)
 
