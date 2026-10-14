@@ -74,6 +74,22 @@ python scripts/backtest.py         # about 8 minutes (most of it timing the coni
 
 Data: [`data/`](data/README.md), from PyPortfolioOpt (MIT licence).
 
+## Paper trading with live prices
+
+`scripts/today.py` downloads the latest prices from Yahoo Finance (free, via `yfinance`), computes
+today's robust portfolio next to Markowitz and equal weight, shows the past days the worst case is
+sized against, and appends the weights to `paper_trading/log.csv`. Run it once a month to build a real
+out-of-sample record. Educational tool, not investment advice.
+
+```bash
+pip install -e ".[live]"
+python scripts/today.py
+```
+
+Default universe: ten liquid ETFs, one per major asset class (US, developed and emerging stocks, US real
+estate, short/medium/long US government bonds, corporate bonds, gold, commodities). Window and settings
+are the backtest's. Use `--tickers` to change the assets.
+
 ## Desktop app
 
 A local Mac/Linux/Windows app that tells the story from statistical mechanics to
