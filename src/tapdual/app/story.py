@@ -16,7 +16,7 @@ from .chapter2 import Chapter2
 from .demos import EnergyDemo, EntropyDemo
 from .references import reading_card
 from .sections import Section
-from .widgets import Card, Segmented, label
+from .widgets import Card, FitStack, Segmented, label
 
 
 def _rows(pairs, tag_width=150) -> QWidget:
@@ -37,11 +37,13 @@ class StatMechSection(Section):
             "the art of predicting the crowd without tracking the individuals.")
         self.seg = Segmented(["The ingredients", "Energy against entropy"])
         self.lay.addWidget(self.seg)
-        self.stack = QStackedWidget()
+        self.stack = FitStack()
         self.stack.addWidget(self._ingredients())
         self.stack.addWidget(Chapter2(header=False))
-        self.lay.addWidget(self.stack, 1)
+        self.lay.addWidget(self.stack)
         self.lay.addWidget(reading_card("statmech"))
+        self.lay.addStretch(1)
+        self.stack.setCurrentIndex(0)
         self.seg.changed.connect(self.stack.setCurrentIndex)
 
     def _ingredients(self) -> QWidget:
@@ -108,9 +110,11 @@ class DisorderSection(Section):
                    "What happens when the rules contradict each other?"))
         self.seg = Segmented(["SK: frustration", "REM: extreme disorder"])
         self.lay.addWidget(self.seg)
-        self.stack = QStackedWidget()
+        self.stack = FitStack()
         self.stack.addWidget(SKPage())
         self.stack.addWidget(REMPage())
-        self.lay.addWidget(self.stack, 1)
+        self.lay.addWidget(self.stack)
         self.lay.addWidget(reading_card("disorder"))
+        self.lay.addStretch(1)
+        self.stack.setCurrentIndex(0)
         self.seg.changed.connect(self.stack.setCurrentIndex)

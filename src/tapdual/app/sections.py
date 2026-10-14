@@ -12,7 +12,7 @@ from . import theme
 from .chapter1 import HopfieldPage, _column, _two_columns
 from .chapter3 import RBMPage
 from .references import reading_card
-from .widgets import Card, Deeper, LabeledSlider, Practice, Segmented, SpinGrid, label
+from .widgets import Card, Deeper, FitStack, LabeledSlider, Practice, Segmented, SpinGrid, label
 
 
 def bridge(previously: str, now: str, question: str) -> QWidget:
@@ -119,8 +119,9 @@ class CurieWeissSection(Section):
         ])
         practice.add(self.sweep_btn); practice.add(self.plot_h); practice.add(self.loop_text)
 
-        self.lay.addWidget(_two_columns(_column(sim, landscape), _column(controls, practice)), 1)
+        self.lay.addWidget(_two_columns(_column(sim, landscape), _column(controls, practice)))
         self.lay.addWidget(reading_card("curie-weiss"))
+        self.lay.addStretch(1)
         self.timer = QTimer(self); self.timer.setInterval(1000 // self.FPS); self.timer.timeout.connect(self.tick)
         self.run_btn.clicked.connect(self.toggle)
         self.rand_btn.clicked.connect(self.random_start)
@@ -283,9 +284,11 @@ class HopfieldSection(Section):
             "[[spin-glass|spin glass]]. In between, it is a working memory, and a machine-learning model.")
         self.seg = Segmented(["Memory", "= Boltzmann machine", "How much can it remember?"])
         self.lay.addWidget(self.seg)
-        self.stack = QStackedWidget()
+        self.stack = FitStack()
         for p in (HopfieldPage(), RBMPage(), CapacityPage()):
             self.stack.addWidget(p)
-        self.lay.addWidget(self.stack, 1)
+        self.lay.addWidget(self.stack)
         self.lay.addWidget(reading_card("hopfield"))
+        self.lay.addStretch(1)
+        self.stack.setCurrentIndex(0)
         self.seg.changed.connect(self.stack.setCurrentIndex)

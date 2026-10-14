@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
         sl.addWidget(self.nav, 1)
         sl.addWidget(label("Blue words open a short explanation with the formulas. "
                            "All symbols: [[notation|notation table]].", "small"))
-        sl.addWidget(label("Based on Kistler, Schmidt, Sebastiani (2023) and Sebastiani, Schmidt (2024).", "small"))
+        sl.addWidget(label("Further reading: at the end of each section.", "small"))
 
         self.stack = QStackedWidget()
         for number, title, cls in CHAPTERS:

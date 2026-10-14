@@ -5,7 +5,7 @@ import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy,
-                               QSlider, QVBoxLayout, QWidget)
+                               QSlider, QStackedWidget, QVBoxLayout, QWidget)
 
 from . import theme
 
@@ -314,6 +314,25 @@ class FrustrationTriangle(QWidget):
         for k, q in enumerate(self._nodes()):
             if (e.position() - q).manhattanLength() < 30:
                 self.s[k] *= -1; self.update(); return
+
+
+class FitStack(QStackedWidget):
+    """A stacked widget whose height is that of the current page, not of the tallest one."""
+
+    def sizeHint(self):
+        w = self.currentWidget()
+        return w.sizeHint() if w else super().sizeHint()
+
+    def minimumSizeHint(self):
+        w = self.currentWidget()
+        return w.minimumSizeHint() if w else super().minimumSizeHint()
+
+    def setCurrentIndex(self, i):
+        super().setCurrentIndex(i)
+        for k in range(self.count()):
+            self.widget(k).setSizePolicy(QSizePolicy.Preferred,
+                                         QSizePolicy.Preferred if k == i else QSizePolicy.Ignored)
+        self.updateGeometry()
 
 
 def hline() -> QFrame:
