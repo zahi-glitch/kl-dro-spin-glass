@@ -1,6 +1,6 @@
 # kl-dro-spin-glass
 
-From statistical mechanics to robust optimisation. A desktop app that tells the story order → disorder → memory → decisions (Curie–Weiss, spin glasses, Hopfield), and a Python package showing that for REM-type approximations of TAP free energies the Parisi formula is the Lagrangian dual of a KL-constrained sup.
+From statistical mechanics to robust optimisation. A desktop app that tells the story order → disorder → memory → decisions (Curie–Weiss, spin glasses, Hopfield), and a Python package showing that for REM-type approximations of TAP free energies the Parisi formula is the Lagrangian dual of a KL-constrained sup, with a robust-portfolio backtest on 28 years of real stock data.
 
 > Status: work in progress, built step by step.
 
@@ -14,7 +14,53 @@ From statistical mechanics to robust optimisation. A desktop app that tells the 
 4. The dictionary: Parisi parameters as Lagrange multipliers.
 5. Numerical primal-dual check and the phase transition.
 
-## Desktop app (work in progress)
+## Case study: KL-robust portfolios on 28 years of US stocks
+
+A walk-forward backtest on real daily prices of 10 US stocks (1990–2018, including the dot-com
+crash and 2008). Every month each strategy is re-estimated on the last two years of returns,
+long-only, with 10 bps transaction costs. All parameters were fixed before looking at results.
+
+| strategy | annual return | volatility | Sharpe | max drawdown | turnover |
+|---|---|---|---|---|---|
+| Equal weight | 18.9% | 22.3% | 0.89 | −57.8% | 0.00 |
+| Markowitz (mean − γ·variance) | 20.0% | 21.6% | 0.95 | −48.9% | 0.28 |
+| Robust mean (KL ball = EVaR) | 17.5% | 17.9% | 0.99 | −38.8% | 0.16 |
+| **Robust mean–variance (KSS23 dual)** | 17.2% | 17.4% | 1.00 | −39.0% | 0.14 |
+
+![wealth and drawdown](results/backtest/equity.png)
+
+What the robust portfolios do: an adversary may reweight the past days within a KL budget ρ, and the
+portfolio is chosen against the worst reweighting. For mean–variance risk this inner worst case is the
+non-linear problem of [KSS23](https://doi.org/10.1088/1751-8121/acdf30), solved through its Parisi-type
+dual in two scalars (q, m); the portfolio gradient comes for free from the worst-case weights
+(Danskin's theorem).
+
+Takeaways:
+
+- **Less risk for a little return.** The robust portfolios cut volatility by about a fifth, the
+  maximum drawdown from −49%/−58% to −39%, and turnover by half, for 1.7–2.8 points of annual return;
+  risk-adjusted return is slightly higher. In the dot-com crash: −25% against −44% for Markowitz.
+- **No tuning of risk aversion needed.** Markowitz swings from 29% to 17% volatility as γ goes from 0.02
+  to 0.2; the robust portfolio stays at 17–18% for every γ and every budget ρ tried
+  ([sensitivity](results/backtest/sensitivity.png)).
+- **The dual is exact and fast.** The worst case from two scalars takes about 2.5 ms, against 24 ms for
+  a standard conic solver (CVXPY + Clarabel) on the same problem, agreeing to 10⁻⁸.
+- **Honest limits.** Here the non-linear (mean–variance) robust portfolio behaves like the linear one
+  (EVaR): its practical edge in this experiment is computational, not performance. The universe has
+  survivorship bias (well-known companies chosen today), returns are against a zero risk-free rate,
+  and it is one dataset.
+
+Full tables, crisis returns and sensitivities: [`results/backtest/summary.md`](results/backtest/summary.md).
+Reproduce:
+
+```bash
+pip install -e ".[backtest]"       # pandas, matplotlib, cvxpy
+python scripts/backtest.py         # about 2 minutes; writes results/backtest/
+```
+
+Data: [`data/`](data/README.md), from PyPortfolioOpt (MIT licence).
+
+## Desktop app
 
 A local Mac/Linux/Windows app that tells the story from statistical mechanics to
 robust optimisation, with live simulations:
