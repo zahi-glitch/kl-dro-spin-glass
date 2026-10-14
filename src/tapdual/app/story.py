@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QGridLayout, QStackedWidget, QWidget
 from .chapter1 import REMPage, SKPage, _column, _two_columns
 from .chapter2 import Chapter2
 from .demos import EnergyDemo, EntropyDemo
+from .references import reading_card
 from .sections import Section
 from .widgets import Card, Segmented, label
 
@@ -40,6 +41,7 @@ class StatMechSection(Section):
         self.stack.addWidget(self._ingredients())
         self.stack.addWidget(Chapter2(header=False))
         self.lay.addWidget(self.stack, 1)
+        self.lay.addWidget(reading_card("statmech"))
         self.seg.changed.connect(self.stack.setCurrentIndex)
 
     def _ingredients(self) -> QWidget:
@@ -110,4 +112,5 @@ class DisorderSection(Section):
         self.stack.addWidget(SKPage())
         self.stack.addWidget(REMPage())
         self.lay.addWidget(self.stack, 1)
+        self.lay.addWidget(reading_card("disorder"))
         self.seg.changed.connect(self.stack.setCurrentIndex)

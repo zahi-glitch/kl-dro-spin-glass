@@ -11,6 +11,7 @@ from .. import spinglass as sg
 from . import theme
 from .chapter1 import HopfieldPage, _column, _two_columns
 from .chapter3 import RBMPage
+from .references import reading_card
 from .widgets import Card, Deeper, LabeledSlider, Practice, Segmented, SpinGrid, label
 
 
@@ -119,6 +120,7 @@ class CurieWeissSection(Section):
         practice.add(self.sweep_btn); practice.add(self.plot_h); practice.add(self.loop_text)
 
         self.lay.addWidget(_two_columns(_column(sim, landscape), _column(controls, practice)), 1)
+        self.lay.addWidget(reading_card("curie-weiss"))
         self.timer = QTimer(self); self.timer.setInterval(1000 // self.FPS); self.timer.timeout.connect(self.tick)
         self.run_btn.clicked.connect(self.toggle)
         self.rand_btn.clicked.connect(self.random_start)
@@ -285,4 +287,5 @@ class HopfieldSection(Section):
         for p in (HopfieldPage(), RBMPage(), CapacityPage()):
             self.stack.addWidget(p)
         self.lay.addWidget(self.stack, 1)
+        self.lay.addWidget(reading_card("hopfield"))
         self.seg.changed.connect(self.stack.setCurrentIndex)

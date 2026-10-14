@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QListWidget, QListWidgetItem, QMainWindow, QScrol
 
 from .sections import CurieWeissSection, HopfieldSection
 from .story import DisorderSection, StatMechSection
+from .references import reading_card
 from .widgets import GlossaryDialog, label, set_glossary_opener
 
 CHAPTERS = [
@@ -24,7 +25,8 @@ class Placeholder(QWidget):
         self.setObjectName("page")
         lay = QVBoxLayout(self); lay.setContentsMargins(28, 24, 28, 24)
         lay.addWidget(label(f"SECTION {number}", "eyebrow")); lay.addWidget(label(title, "title"))
-        lay.addWidget(label("Coming next.", "lead")); lay.addStretch(1)
+        lay.addWidget(label("Coming next.", "lead"))
+        lay.addWidget(reading_card("robust")); lay.addStretch(1)
 
 
 class MainWindow(QMainWindow):
