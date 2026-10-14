@@ -1,7 +1,7 @@
 """Further reading: at most three references per section, each with one line on why to read it.
 
-Most entries come from the bibliographies of Kistler–Schmidt–Sebastiani (2023), Sebastiani–Schmidt (2024)
-and Sebastiani's thesis; the Curie–Weiss and Hopfield entries add the standard sources those lists lack.
+Entries are taken from the bibliography of the introduction to Sebastiani's thesis (2024), except
+Bolthausen–Sznitman (cited in KSS23) and Brock–Durlauf (the source of the Curie–Weiss market example).
 """
 from __future__ import annotations
 
@@ -9,12 +9,13 @@ from .widgets import Card, label
 
 READING = {
     "statmech": [
-        ("Y. Polyanskiy, Y. Wu", "Lecture Notes on Information Theory", "MIT, 2017/2019",
-         "entropy, relative entropy and their variational formulas, from scratch."),
-        ("M. D. Donsker, S. R. S. Varadhan",
-         "Asymptotic evaluation of certain Markov process expectations for large time, I",
-         "Comm. Pure Appl. Math. 28 (1975) 1–47",
-         "the variational formula behind 'free energy = max of payoff minus relative entropy'."),
+        ("A. Bovier", "Principles of statistical mechanics",
+         "Chapter 2 of Statistical Mechanics of Disordered Systems: A Mathematical Perspective, Cambridge University "
+         "Press, 2006",
+         "Gibbs measures, free energy and the thermodynamic limit, stated precisely and briefly."),
+        ("S. Friedli, Y. Velenik", "Statistical Mechanics of Lattice Systems: A Concrete Mathematical Introduction",
+         "Cambridge University Press, 2017, Chapter 1",
+         "an intuitive first contact with the subject."),
     ],
     "curie-weiss": [
         ("S. Friedli, Y. Velenik", "Statistical Mechanics of Lattice Systems: A Concrete Mathematical Introduction",
@@ -39,13 +40,13 @@ READING = {
         ("J. J. Hopfield", "Neural networks and physical systems with emergent collective computational abilities",
          "PNAS 79 (1982) 2554–2558",
          "the original associative memory."),
-        ("H. Nishimori", "Statistical Physics of Spin Glasses and Information Processing: An Introduction",
-         "Oxford University Press, 2001",
-         "spin glasses and their use in memory, error correction and learning, at an introductory level."),
-        ("A. Barra, A. Bernacchia, E. Santucci, P. Contucci",
-         "On the equivalence of Hopfield networks and Boltzmann machines",
-         "Neural Networks 34 (2012) 1–9",
-         "the Hopfield = restricted Boltzmann machine duality shown in the second tab."),
+        ("D. J. Amit, H. Gutfreund, H. Sompolinsky", "Spin-glass models of neural networks",
+         "Phys. Rev. A 32 (1985) 1007",
+         "the storage capacity α<sub>c</sub> ≈ 0.138 and the phase diagram."),
+        ("E. Agliari, L. Albanese, A. Barra, G. Ottaviani",
+         "Replica symmetry breaking in neural networks: a few steps toward rigorous results",
+         "J. Phys. A 53 (2020) 415005",
+         "where the mathematics of the loaded Hopfield model stands."),
     ],
     "robust": [
         ("N. Kistler, M. A. Schmidt, G. Sebastiani", "On the REM approximation of TAP free energies",
