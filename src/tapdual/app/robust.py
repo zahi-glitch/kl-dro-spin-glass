@@ -359,19 +359,23 @@ def _heading(number: str, text: str) -> QWidget:
 
 
 def _table(headers, rows, bold_row=None, first_width=None, text=False) -> QWidget:
-    """A small table with generous spacing; numbers right-aligned (all left-aligned if text=True)."""
-    w = QWidget(); g = QGridLayout(w); g.setContentsMargins(0, 4, 0, 4)
-    g.setHorizontalSpacing(28); g.setVerticalSpacing(8)
-    for c, h in enumerate(headers if any(headers) else []):
-        g.addWidget(label(f"<b>{h}</b>", "small", wrap=False), 0, c, Qt.AlignLeft if c == 0 or text else Qt.AlignRight)
-    for r, row in enumerate(rows, 1):
+    """A small table as one rich-text label (wraps correctly); numbers right-aligned unless text=True."""
+    pad = "padding: 5px 24px 5px 0px;"
+    first = f"width: {first_width}px;" if first_width else ""
+    html = ["<table cellspacing='0' cellpadding='0' style='margin: 2px 0px;'>"]
+    if any(headers):
+        html.append("<tr>" + "".join(
+            f"<td style='{pad}{first if c == 0 else ''} color: {theme.INK_3}; font-size: 12px;' "
+            f"align='{'left' if c == 0 or text else 'right'}'><b>{h}</b></td>" for c, h in enumerate(headers)) + "</tr>")
+    for r, row in enumerate(rows):
+        cells = []
         for c, cell in enumerate(row):
-            txt = f"<b>{cell}</b>" if r - 1 == bold_row else str(cell)
-            g.addWidget(label(txt, "body", wrap=False), r, c, Qt.AlignLeft if c == 0 or text else Qt.AlignRight)
-    g.setColumnStretch(len(headers), 1)
-    if first_width:
-        g.setColumnMinimumWidth(0, first_width)
-    return w
+            txt = f"<b>{cell}</b>" if r == bold_row else str(cell)
+            cells.append(f"<td style='{pad}{first if c == 0 else ''}' valign='top' "
+                         f"align='{'left' if c == 0 or text else 'right'}'>{txt}</td>")
+        html.append("<tr>" + "".join(cells) + "</tr>")
+    html.append("</table>")
+    return label("".join(html), "body")
 
 
 def _gap(h=6) -> QWidget:
@@ -399,11 +403,28 @@ class CaseStudyPage(QWidget):
         pct = lambda v: f"{100 * v:.1f}%"
 
         lay.addWidget(label(
-            f"Everything so far used one sample of returns. Here the robust portfolio meets real data: daily prices "
-            f"of {len(res['universe'])} US stocks, {res['period'][0][:4]}–{res['period'][1][:4]}, through the dot-com "
-            f"crash and 2008. Every month each strategy is re-estimated on the last two years, long-only, paying 0.1% "
-            f"on what it trades. Settings were fixed before looking at the results "
-            f"(γ = {res['gamma']}, ρ = {res['rho']} per day).", "body"))
+            "Everything so far used one sample of returns. Here the robust portfolio meets real market data.", "body"))
+
+        names = {"AAPL": "Apple", "GE": "General Electric", "AMD": "AMD", "WMT": "Walmart",
+                 "BAC": "Bank of America", "T": "AT&amp;T", "XOM": "ExxonMobil", "BBY": "Best Buy",
+                 "PFE": "Pfizer", "JPM": "JPMorgan Chase"}
+        first, last = res["period"][0], res["period"][1]
+        data = Card("The data")
+        data.add(_table(["", ""], [
+            ["<b>What</b>", "daily closing prices of 10 large US companies, adjusted for dividends and splits"],
+            ["<b>Companies</b>", ", ".join(f"{names.get(t, t)} ({t})" for t in res["universe"])],
+            ["<b>Period</b>", f"January 1990 to April 2018; results are measured from {first[:7]} to {last[:7]} "
+                              "(the first two years are only used for estimation)"],
+            ["<b>Includes</b>", "the dot-com crash (2000–02) and the financial crisis (2007–09)"],
+            ["<b>Source</b>", "the test data of PyPortfolioOpt, an open-source portfolio library (MIT licence); "
+                              "file data/stock_prices.csv in this project"],
+            ["<b>Method</b>", "every month each strategy is re-estimated on the last two years of daily returns, "
+                              "long-only, paying 0.1% on what it trades; settings fixed before looking at the "
+                              f"results (γ = {res['gamma']}, ρ = {res['rho']} per day)"],
+            ["<b>Caveat</b>", "these are well-known companies chosen today, so they survived: absolute returns look "
+                              "better than a random choice made in 1990 would have (survivorship bias)"],
+        ], first_width=120, text=True))
+        lay.addWidget(data)
 
         # 1 ---------------------------------------------------------------- plain words
         lay.addWidget(_heading("1", "In plain words"))
@@ -434,7 +455,8 @@ class CaseStudyPage(QWidget):
 
         quality = Card("Is it a better portfolio?")
         quality.add(label("There is no single 'better': a risk penalty trades some return for a calmer ride. "
-                          "On this data, from Markowitz to the robust portfolio:", "body"))
+                          f"On the 10 US stocks above, {first[:4]}–{last[:4]}, from Markowitz to the robust "
+                          "portfolio:", "body"))
         quality.add(_table(["", "Markowitz", "robust"],
                            [["return per year", pct(mk["annual return"]), pct(rob["annual return"])],
                             ["swings (volatility)", pct(mk["annual volatility"]), pct(rob["annual volatility"])],
