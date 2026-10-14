@@ -143,9 +143,11 @@ ENTRIES: dict[str, tuple[str, list]] = {
               "(Steffan and Kühn: ≈ 0.13819). A rigorous derivation of α<sub>c</sub> is still open."),
     ]),
     "spin-glass": ("Spin glass", [
-        ("p", "A system whose couplings are random, some favouring agreement and others disagreement. No "
-              "configuration satisfies all couplings (frustration), the energy landscape has many valleys, and at "
-              "low temperature the Gibbs measure splits into many 'pure states' organised in a tree "
+        ("p", "A magnetic system with random couplings, some favouring agreement and others disagreement, that "
+              "freezes at low temperature into a disordered state. Random couplings alone do not make a glass: "
+              "the key ingredients are disorder and frustration (no configuration satisfies all couplings), and "
+              "the glassy behaviour appears only below a critical temperature. In the mean-field theory of "
+              "Parisi, the Gibbs measure then splits into many 'pure states' organised in a tree "
               "(ultrametricity)."),
     ]),
     "sk": ("Sherrington–Kirkpatrick (SK) model", [

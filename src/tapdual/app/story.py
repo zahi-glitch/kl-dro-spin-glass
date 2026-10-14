@@ -95,9 +95,10 @@ class DisorderSection(Section):
     def __init__(self):
         super().__init__(
             "3", "Disorder: spin glasses",
-            "Replace 'everyone agrees' by random rules: some pairs want to agree, others to disagree. This is a "
-            "[[spin-glass|spin glass]]. The rules contradict each other, the landscape becomes rugged, and the "
-            "free energy is no longer a simple maximum.",
+            "Replace 'everyone agrees' by random rules: some pairs want to agree, others to disagree. Random rules "
+            "can contradict each other, the landscape becomes rugged, and at low temperature the system can freeze "
+            "into one of many disordered states: the behaviour that [[spin-glass|spin-glass]] models are built to "
+            "describe.",
             story=("When everyone wants to agree (Curie–Weiss), one number m tells the whole story and order appears "
                    "below a critical temperature.",
                    "Each pair of spins gets its own random coupling. We look at two models: SK, where pairs interact "

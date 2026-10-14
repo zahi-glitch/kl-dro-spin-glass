@@ -206,7 +206,7 @@ class CapacityPage(QWidget):
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(12)
         lay.addWidget(label(
             "Store more and more random memories, P = αN, and ask whether each one can still be recalled. As α grows, "
-            "the cross-talk between memories acts like random couplings and the network turns into a "
+            "the cross-talk between memories acts like random couplings and the network starts to behave like a "
             "[[spin-glass|spin glass]], close cousin of the Sherrington–Kirkpatrick ([[sk|SK]]) model: recall breaks down near the "
             "[[capacity|storage capacity]] α<sub>c</sub> ≈ 0.138.", "body"))
 
@@ -273,11 +273,11 @@ class HopfieldSection(Section):
     def __init__(self):
         super().__init__(
             "4", "Memory: Hopfield networks",
-            story=("Random couplings (spin glasses) create a rugged landscape with many valleys, but nobody chose them.",
+            story=("Random couplings (spin-glass models) create a rugged landscape with many valleys, but nobody chose them.",
                    "Choose the couplings on purpose, with Hebb's rule, so that the valleys are memories you picked.",
                    "Can a physical system store information and retrieve it from a fragment?"),
             lead="Store memories in the couplings and each memory becomes a valley. With one memory the "
-            "[[hopfield|Hopfield model]] is the [[curie-weiss|Curie–Weiss]] magnet in disguise; with many it becomes a "
+            "[[hopfield|Hopfield model]] is the [[curie-weiss|Curie–Weiss]] magnet in disguise; with many, the memories interfere and it behaves like a "
             "[[spin-glass|spin glass]]. In between, it is a working memory, and a machine-learning model.")
         self.seg = Segmented(["Memory", "= Boltzmann machine", "How much can it remember?"])
         self.lay.addWidget(self.seg)

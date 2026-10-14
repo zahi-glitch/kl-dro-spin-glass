@@ -196,7 +196,7 @@ class SKPage(QWidget):
         puzzle.add(self.triangle)
         tri_btn = QPushButton("New random signs"); tri_btn.clicked.connect(self.triangle.randomize)
         puzzle.add(tri_btn)
-        puzzle.add(label("Two ingredients make a spin glass: <b>disorder</b> (random signs) and <b>frustration</b> "
+        puzzle.add(label("Spin-glass models combine two ingredients: <b>disorder</b> (random signs) and <b>frustration</b> "
                          "(loops whose signs multiply to −1, about half of them here). All '≠' on a triangle would "
                          "also be frustrated, but without randomness: that is an antiferromagnet on a triangular "
                          "lattice, not a glass.", "small"))
@@ -355,7 +355,7 @@ class REMPage(QWidget):
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(12)
         lay.addWidget(label(
             "Push disorder to the limit: forget couplings and give every configuration its own independent random "
-            "energy. Derrida's Random Energy Model ([[rem|REM]]) is the simplest spin glass. It <b>freezes</b>, and the "
+            "energy. Derrida's Random Energy Model ([[rem|REM]]) is the simplest spin-glass model. It <b>freezes</b>, and the "
             "reason is a budget: there are only 2<sup>N</sup> configurations, so the [[entropy]] cannot exceed "
             "log 2 per spin. When the budget runs out, the probability piles up on a handful of states.", "body"))
         lay.addWidget(_two_columns(_column(weights, entropy), _column(controls, stats, practice, explain)))
