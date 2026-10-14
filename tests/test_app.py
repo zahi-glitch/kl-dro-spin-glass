@@ -16,14 +16,25 @@ def test_all_sections_and_tabs_build(tmp_path, monkeypatch):
     path = tmp_path / "prices.csv"
     pd.DataFrame(100 * np.cumprod(1 + R, 0), index=pd.bdate_range("2023-01-02", periods=700),
                  columns=list(UNIVERSE)).to_csv(path)
-    monkeypatch.setenv("TAPDUAL_PRICES_CSV", str(path))   # the live tab must not go online in tests
-    from PySide6.QtWidgets import QApplication
+    monkeypatch.setenv("TAPDUAL_PRICES_CSV", str(path))   # the live pages must not go online in tests
+    import tapdual.live
+    monkeypatch.setattr(tapdual.live, "VIRTUAL", tmp_path / "virtual.json")
+    monkeypatch.setattr(tapdual.live, "LOG", tmp_path / "log.csv")
+    import time
+    from PySide6.QtWidgets import QApplication, QWidget
     app = QApplication.instance() or QApplication([])
     from tapdual.app.window import CHAPTERS, MainWindow
     w = MainWindow(); w.show()
     for row in range(len(CHAPTERS)):
         w.nav.setCurrentRow(row); app.processEvents()
         section = w.stack.widget(row).widget()
+        for page in section.findChildren(QWidget):
+            if hasattr(page, "poll"):                    # wait for background downloads to finish
+                for _ in range(400):
+                    app.processEvents()
+                    if not page.poll.isActive():
+                        break
+                    time.sleep(0.02)
         if hasattr(section, "seg"):
             for i in range(section.stack.count()):
                 section.seg.changed.emit(i); app.processEvents()

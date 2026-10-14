@@ -639,6 +639,171 @@ class LivePage(QWidget):
         self.trades_box.setText(self._trades_text())
 
 
+# --------------------------------------------------------------------------- 5.3: a virtual $10,000
+class VirtualPage(QWidget):
+    """A virtual investment of $10,000 at the latest close, followed every time the page is opened."""
+
+    def __init__(self):
+        super().__init__()
+        from .. import live
+        self.live = live
+        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(16)
+        lay.addWidget(label(
+            "The first time you open this page, it invests a virtual <b>$10,000</b> (the funds trade in dollars) at "
+            "the latest closing prices, in each of the four strategies. Every time you come back, it downloads the new "
+            "prices and shows what each $10,000 is worth now. Like in the case study, each strategy rebalances on the "
+            "first trading day of every month, using only the data available on that day, and pays 0.1% on what it "
+            "trades (so each starts at $9,990). <b>No real money, educational only.</b>", "body"))
+        bar = QWidget(); bl = QHBoxLayout(bar); bl.setContentsMargins(0, 0, 0, 0); bl.setSpacing(10)
+        self.refresh_btn = QPushButton("Update with the latest prices"); self.refresh_btn.setObjectName("primary")
+        self.reset_btn = QPushButton("Start again from the latest close")
+        bl.addWidget(self.refresh_btn); bl.addWidget(self.reset_btn); bl.addStretch(1)
+        lay.addWidget(bar)
+        self.status = label("Opening this page downloads the prices automatically.", "body")
+        lay.addWidget(self.status)
+
+        self.now_card = Card("What each $10,000 is worth now")
+        self.now_row = QWidget(); self.now_lay = QHBoxLayout(self.now_row)
+        self.now_lay.setContentsMargins(0, 6, 0, 6); self.now_lay.setSpacing(40)
+        self.now_card.add(self.now_row)
+        self.table = label("", "body"); self.now_card.add(self.table)
+
+        self.chart_card = Card("Value day by day")
+        self.plot = pg.PlotWidget(axisItems={"bottom": pg.DateAxisItem(orientation="bottom")})
+        theme.style_plot(self.plot.getPlotItem(), "", "value ($)")
+        self.plot.setFixedHeight(300); self.plot.addLegend(offset=(10, 10))
+        self.chart_card.add(self.plot)
+        self.chart_note = label("", "small"); self.chart_card.add(self.chart_note)
+
+        self.hold_card = Card("What the robust portfolio holds now")
+        self.hold = label("", "body"); self.hold_card.add(self.hold)
+        for c in (self.now_card, self.chart_card, self.hold_card):
+            c.hide(); lay.addWidget(c)
+        lay.addStretch(1)
+
+        self.result, self.worker, self.started, self.reset = None, None, False, False
+        self.poll = QTimer(self); self.poll.setInterval(200); self.poll.timeout.connect(self.collect)
+        self.refresh_btn.clicked.connect(self.start)
+        self.reset_btn.clicked.connect(self.start_again)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if not self.started:
+            self.start()
+
+    def start_again(self):
+        from PySide6.QtWidgets import QMessageBox
+        ok = QMessageBox.question(self, "Start again?",
+                                  "This forgets the current virtual investment and invests $10,000 again at the "
+                                  "latest closing prices. Continue?")
+        if ok == QMessageBox.Yes:
+            self.reset = True
+            self.start()
+
+    def start(self):
+        if self.worker and self.worker.is_alive():
+            return
+        self.started = True
+        self.refresh_btn.setEnabled(False); self.reset_btn.setEnabled(False)
+        self.status.setText("Downloading the latest prices and following your $10,000… (a few seconds)")
+        live, reset = self.live, self.reset
+        self.reset = False
+
+        def run():
+            try:
+                saved = None if reset else live.load_virtual()
+                tickers = saved[2] if saved else list(live.UNIVERSE)
+                years = live.years_needed(saved[0]) if saved else 3
+                prices = live.get_prices(tickers, years=years)
+                new = saved is None
+                start, capital = live.start_virtual(prices) if new else saved[:2]
+                self.result = ("ok", (live.simulate(prices, start, capital), new))
+            except Exception as err:          # shown to the user, never crashes the app
+                self.result = ("error", str(err))
+        self.result = None
+        self.worker = threading.Thread(target=run, daemon=True); self.worker.start(); self.poll.start()
+
+    def collect(self):
+        if self.result is None:
+            return
+        self.poll.stop(); self.refresh_btn.setEnabled(True); self.reset_btn.setEnabled(True)
+        kind, value = self.result
+        if kind == "error":
+            self.status.setText(f"<b>Could not update:</b> {value}")
+            return
+        v, new = value
+        last = v.dates[-1]
+        days = len(v.dates) - 1
+        if new:
+            self.status.setText(f"<b>Started.</b> $10,000 invested at the close of {v.start:%d %B %Y} in each "
+                                "strategy. Come back on the next trading day to see how it moves.")
+        else:
+            self.status.setText(f"Invested at the close of <b>{v.start:%d %B %Y}</b>; latest prices "
+                                f"<b>{last:%d %B %Y}</b> ({days} trading day{'s' if days != 1 else ''} later, "
+                                f"{v.rebalances} monthly rebalance{'s' if v.rebalances != 1 else ''}).")
+        while self.now_lay.count():
+            w = self.now_lay.takeAt(0).widget()
+            if w:
+                w.deleteLater()
+        names = list(v.values)
+        rows = []
+        for n in names:
+            now = v.values[n][-1]
+            self.now_lay.addWidget(_big(f"${now:,.0f}", n))
+            rows.append([n, f"${v.capital:,.0f}", f"${now:,.2f}", f"{now - v.capital:+,.2f}",
+                         f"{100 * (now / v.capital - 1):+.2f}%"])
+        self.now_lay.addStretch(1)
+        self.table.setText(_table(["strategy", "invested", "worth now", "gain ($)", "gain (%)"], rows,
+                                  bold_row=names.index(self.live.ROBUST), first_width=200).text())
+        self.plot.clear()
+        from datetime import datetime, time as dtime
+        xs = [datetime.combine(d, dtime(16)).timestamp() for d in v.dates]
+        colors = {"Equal weight": theme.INK_3, "Markowitz": theme.ACCENT_2, "Minimum variance": "#1D9E75",
+                  self.live.ROBUST: theme.ACCENT}
+        for n in names:
+            self.plot.plot(xs, v.values[n], pen=pg.mkPen(colors.get(n, theme.INK), width=2.5 if n == self.live.ROBUST else 1.6),
+                           symbol="o" if len(xs) < 40 else None, symbolSize=5, symbolBrush=colors.get(n, theme.INK),
+                           name=n)
+        self.plot.addItem(pg.InfiniteLine(pos=v.capital, angle=0, pen=pg.mkPen(theme.BORDER, style=Qt.DashLine)))
+        self.chart_note.setText("Dashed line: the $10,000 invested. The first point is the start: each strategy is "
+                                "at $9,990 after paying 0.1% to buy." if days < 2 else
+                                "Dashed line: the $10,000 invested.")
+        w = v.weights_now[self.live.ROBUST]
+        self.hold.setText(_table(["fund", "share of the portfolio"],
+                                 [[f"{t} &nbsp;<span style='color:{theme.INK_3};'>{self.live.UNIVERSE.get(t, '')}</span>",
+                                   f"{100 * x:.1f}%"] for t, x in sorted(zip(v.tickers, w),
+                                                                       key=lambda p: -p[1]) if x >= 0.0005],
+                                 first_width=320).text())
+        for c in (self.now_card, self.chart_card, self.hold_card):
+            c.show()
+
+class _SubSection(Section):
+    def __init__(self, number, title, lead, page):
+        super().__init__(number, title, lead)
+        self.lay.addWidget(page)
+        self.lay.addStretch(1)
+
+
+class CaseStudySection(_SubSection):
+    def __init__(self):
+        super().__init__("5.1", "Case study: real data",
+                         "The robust portfolio of section 5 on 28 years of real stock prices: what it does, how it "
+                         "compares, and where the mathematics pays off.", CaseStudyPage())
+
+
+class LiveSection(_SubSection):
+    def __init__(self):
+        super().__init__("5.2", "Today: live portfolios",
+                         "The four strategies computed from today's market prices.", LivePage())
+
+
+class VirtualSection(_SubSection):
+    def __init__(self):
+        super().__init__("5.3", "A virtual $10,000",
+                         "Invest a virtual $10,000 once, then watch it day by day: every time you open this page.",
+                         VirtualPage())
+
+
 # --------------------------------------------------------------------------- section
 class RobustSection(Section):
     def __init__(self):
@@ -652,13 +817,10 @@ class RobustSection(Section):
                    "log 2 runs out and the measure freezes (section 3).",
                    "Read ν as an adversary who may reweight your data within a budget H(ν | μ) ≤ ρ.",
                    "How bad can things get if the data are slightly wrong, and what plays the role of temperature?"))
-        self.seg = Segmented(["Worst case in a KL ball", "Nonlinear risk: the sup becomes an inf", "Dictionary",
-                              "Case study: real data", "Today: live data"])
+        self.seg = Segmented(["Worst case in a KL ball", "Nonlinear risk: the sup becomes an inf", "Dictionary"])
         self.lay.addWidget(self.seg)
         self.stack = FitStack()
         self.stack.addWidget(LinearPage()); self.stack.addWidget(NonlinearPage()); self.stack.addWidget(self._dictionary())
-        self.stack.addWidget(CaseStudyPage())
-        self.stack.addWidget(LivePage())
         self.stack.setCurrentIndex(0)
         self.lay.addWidget(self.stack)
         self.seg.changed.connect(self.stack.setCurrentIndex)

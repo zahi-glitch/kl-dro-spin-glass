@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QListWidget, QListWidgetItem, QMainWindow, QScrol
 from .sections import CurieWeissSection, HopfieldSection
 from .story import DisorderSection, StatMechSection
 from .references import reading_card
-from .robust import RobustSection
+from .robust import CaseStudySection, LiveSection, RobustSection, VirtualSection
 from .widgets import GlossaryDialog, label, set_glossary_opener
 
 CHAPTERS = [
@@ -17,6 +17,9 @@ CHAPTERS = [
     ("3", "Disorder: spin glasses", DisorderSection),
     ("4", "Memory: Hopfield networks", HopfieldSection),
     ("5", "Robust decisions", RobustSection),
+    ("5.1", "Case study: real data", CaseStudySection),
+    ("5.2", "Today: live portfolios", LiveSection),
+    ("5.3", "A virtual $10,000", VirtualSection),
 ]
 
 
@@ -43,7 +46,10 @@ class MainWindow(QMainWindow):
         self.nav = QListWidget(); self.nav.setObjectName("nav")
         self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff); self.nav.setWordWrap(True)
         for number, title, cls in CHAPTERS:
-            item = QListWidgetItem(f"{number}   {title}")
+            sub = "." in number
+            item = QListWidgetItem(f"      {number}   {title}" if sub else f"{number}   {title}")
+            if sub:
+                f = item.font(); f.setPixelSize(13); item.setFont(f)
             if cls is None:
                 item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
             self.nav.addItem(item)

@@ -28,3 +28,21 @@ def test_compute_and_log(prices_csv, tmp_path, monkeypatch):
     # a different list of assets starts a fresh log instead of mixing columns
     today.tickers = today.tickers[:-1]
     assert "moved" in live.start_fresh_log_if_universe_changed(today.tickers)
+
+
+def test_virtual_investment(prices_csv, tmp_path, monkeypatch):
+    from tapdual import live
+    monkeypatch.setattr(live, "VIRTUAL", tmp_path / "virtual.json")
+    prices = live.get_prices(list(live.UNIVERSE), prices_csv)
+    start = prices.index[-80].date()
+    v = live.simulate(prices, start, 10_000)
+    for name, values in v.values.items():
+        assert len(values) == 80
+        assert abs(values[0] - 9_990) < 1e-6                  # bought at the start, paying 0.1%
+        assert abs(v.weights_now[name].sum() - 1) < 1e-9
+    # no look-ahead: the path up to a day does not depend on later prices
+    v_short = live.simulate(prices.iloc[:-20], start, 10_000)
+    for name in v.values:
+        assert np.allclose(v_short.values[name], v.values[name][:60])
+    live.start_virtual(prices)
+    assert live.load_virtual()[0] == prices.index[-1].date()

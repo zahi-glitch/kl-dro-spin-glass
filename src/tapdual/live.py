@@ -13,7 +13,10 @@ Set the environment variable TAPDUAL_PRICES_CSV to a price file to work offline 
 from __future__ import annotations
 
 import csv
+import json
+import math
 import os
+import threading
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -43,6 +46,8 @@ STRATEGIES = [
 ]
 ROBUST = "Robust mean-variance"
 LOG = Path(__file__).resolve().parents[2] / "paper_trading" / "log.csv"
+VIRTUAL = Path(__file__).resolve().parents[2] / "paper_trading" / "virtual_portfolio.json"
+COST_BPS = 10.0
 HEADER_FIXED = ["run_date", "prices_as_of", "strategy"]
 
 
@@ -68,9 +73,20 @@ def read_prices_csv(path, tickers):
     return df[list(tickers)].dropna()
 
 
-def get_prices(tickers, csv_path=None):
+_CACHE: dict = {}
+_LOCK = threading.Lock()
+
+
+def get_prices(tickers, csv_path=None, years=3):
+    """Prices from a CSV (argument or TAPDUAL_PRICES_CSV) or downloaded; downloads are cached for the session."""
     csv_path = csv_path or os.environ.get("TAPDUAL_PRICES_CSV")
-    return read_prices_csv(csv_path, tickers) if csv_path else download_prices(tickers)
+    if csv_path:
+        return read_prices_csv(csv_path, tickers)
+    key = (tuple(tickers), years)
+    with _LOCK:
+        if key not in _CACHE:
+            _CACHE[key] = download_prices(tickers, years)
+        return _CACHE[key]
 
 
 # --------------------------------------------------------------------------- portfolios
@@ -146,3 +162,69 @@ def append_log(today: Today) -> list:
                         *[f"{v:.6f}" for v in today.weights[s.name]]])
     msgs.append(f"Logged to {LOG}")
     return msgs
+
+
+# --------------------------------------------------------------------------- virtual investment
+@dataclass
+class Virtual:
+    start: date                  # the investment is made at this day's closing prices
+    capital: float
+    dates: list                  # trading days from start to the latest price
+    values: dict                 # strategy name -> value on each of those days
+    weights_now: dict            # strategy name -> current weights (after drift)
+    rebalances: int              # number of monthly rebalances after the start
+    tickers: list
+
+
+def load_virtual():
+    if not VIRTUAL.exists():
+        return None
+    d = json.loads(VIRTUAL.read_text())
+    return date.fromisoformat(d["start"]), float(d["capital"]), d.get("tickers", list(UNIVERSE))
+
+
+def start_virtual(prices, capital=10_000.0):
+    """Invest `capital` at the latest closing prices available (yesterday's close when run during the day)."""
+    start = prices.index[-1].date()
+    VIRTUAL.parent.mkdir(parents=True, exist_ok=True)
+    VIRTUAL.write_text(json.dumps({"start": start.isoformat(), "capital": capital,
+                                   "tickers": list(prices.columns), "created": date.today().isoformat()}, indent=2))
+    return start, capital
+
+
+def years_needed(start: date) -> int:
+    """Years of prices to download: the estimation window before the start, plus the time since."""
+    return max(3, math.ceil(2.3 + (date.today() - start).days / 365.25))
+
+
+def simulate(prices, start: date, capital: float) -> Virtual:
+    """Value of `capital` invested at `start` in each strategy, rebalanced on the first trading day of each month.
+
+    Each rebalance uses only the returns up to that day (no look-ahead) and pays COST_BPS per unit of turnover;
+    between rebalances the number of shares of each fund is held fixed, so the weights drift with prices.
+    """
+    P = prices.to_numpy(dtype=float)
+    days = [d.date() for d in prices.index]
+    if start not in days:
+        raise RuntimeError(f"no prices for the start day {start}")
+    s = days.index(start)
+    if s < WINDOW:
+        raise RuntimeError("not enough price history before the start day")
+    R = 100.0 * (P[1:] / P[:-1] - 1.0)               # R[k] = return from day k to day k+1, in %
+    values, weights_now, n_reb = {}, {}, 0
+    for strat in STRATEGIES:
+        shares, v, path = None, capital, []
+        for i in range(s, len(days)):
+            if shares is not None:
+                v = float(shares @ P[i])
+            if i == s or days[i].month != days[i - 1].month:      # start, or first trading day of a month
+                w_old = (shares * P[i] / v) if shares is not None else np.zeros(P.shape[1])
+                w = strat.weights(R[i - WINDOW:i])                # returns up to and including day i
+                v -= COST_BPS / 1e4 * float(np.abs(w - w_old).sum()) * v
+                shares = v * w / P[i]
+                if i > s and strat is STRATEGIES[0]:
+                    n_reb += 1
+            path.append(v)
+        values[strat.name] = np.array(path)
+        weights_now[strat.name] = shares * P[-1] / float(shares @ P[-1])
+    return Virtual(start, capital, days[s:], values, weights_now, n_reb, list(prices.columns))
