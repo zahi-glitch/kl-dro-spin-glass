@@ -67,13 +67,27 @@ def read_prices_csv(path, tickers):
     return df[list(tickers)].dropna()
 
 
+HEADER_FIXED = ["run_date", "prices_as_of", "strategy"]
+
+
+def start_fresh_log_if_universe_changed(tickers):
+    """One log per list of assets: if the assets changed, move the old log aside and start a new one."""
+    if not LOG.exists():
+        return
+    with LOG.open() as f:
+        header = next(csv.reader(f), [])
+    if header != HEADER_FIXED + list(tickers):
+        old = LOG.with_name(f"log-before-{date.today().isoformat()}.csv")
+        LOG.rename(old)
+        print(f"The list of assets changed since the last run: the old log was moved to {old.name} "
+              f"and a new log starts today.")
+
+
 def last_logged_weights(strategy_name, tickers):
     if not LOG.exists():
         return None
     rows = [r for r in csv.DictReader(LOG.open()) if r["strategy"] == strategy_name]
-    if not rows or any(t not in rows[-1] for t in tickers):
-        return None                                   # no earlier run with the same assets
-    return np.array([float(rows[-1][t]) for t in tickers])
+    return np.array([float(rows[-1][t]) for t in tickers]) if rows else None
 
 
 def main():
@@ -110,6 +124,8 @@ def main():
     for k in top:
         print(f"  {dates[k].date()}   portfolio return {R[k] @ x:+.2f}%   weight x{r.weights[k] * len(R):.1f}")
 
+    if not a.no_log:
+        start_fresh_log_if_universe_changed(tickers)
     prev = last_logged_weights("Robust mean-variance", tickers)
     if prev is not None:
         print("\nTrades for the robust portfolio since the last log entry (percentage points of the portfolio):")
@@ -125,7 +141,7 @@ def main():
         with LOG.open("a", newline="") as f:
             w = csv.writer(f)
             if new:
-                w.writerow(["run_date", "prices_as_of", "strategy", *tickers])
+                w.writerow(HEADER_FIXED + list(tickers))
             for s in STRATEGIES:
                 w.writerow([date.today().isoformat(), as_of.isoformat(), s.name,
                             *[f"{v:.6f}" for v in weights[s.name]]])
