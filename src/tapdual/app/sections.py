@@ -231,7 +231,7 @@ class CapacityPage(QWidget):
             "<b>Few memories</b> (P fixed, or P/N → 0): solved rigorously. The free energy is a supremum over the "
             "[[overlap|overlaps]], a P-dimensional [[curie-weiss|Curie–Weiss]] formula.<br><br>"
             "<b>Many memories, high temperature or small α</b>: the [[replica-symmetry|replica-symmetric]] free energy "
-            "is proved (Talagrand; Shcherbina and Tirozzi; and later work).<br><br>"
+            "is proved (Pastur, Shcherbina and Tirozzi; Talagrand; and later work).<br><br>"
             "<b>Many memories, low temperature</b>, which is where recall lives: <b>open</b>. Physics has the "
             "replica-symmetric solution of Amit, Gutfreund and Sompolinsky (AGS, α<sub>c</sub> ≈ 0.138) and "
             "[[rsb|replica-symmetry-breaking]] corrections (Steffan and Kühn: α<sub>c</sub> ≈ 0.13819). Agliari, "

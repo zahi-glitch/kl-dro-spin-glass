@@ -75,8 +75,13 @@ class HopfieldPage(QWidget):
             "m<sub>μ</sub>(σ) = (1/N) Σ<sub>i</sub> ξ<sub>i</sub><sup>μ</sup> σ<sub>i</sub>, the energy is −(N/2) Σ<sub>μ</sub> m<sub>μ</sub><sup>2</sup> "
             "+ const: each memory is a valley. The dynamics is [[glauber|Glauber's]]: σ<sub>i</sub> = +1 with probability "
             "1/(1 + e<sup>−2h<sub>i</sub>/T</sup>), local field h<sub>i</sub> = Σ<sub>j</sub> J<sub>ij</sub> σ<sub>j</sub>. "
-            "Here N = 256 and 3 memories; recall survives up to about 0.138·N random memories "
-            "(Amit, Gutfreund, Sompolinsky). Next tab: this network is a restricted Boltzmann machine in disguise."))
+            "Here N = 256 and only 3 memories, so recall is easy. <b>With many memories</b> each one disturbs the "
+            "recall of the others (cross-talk). If the number P of memories grows with N, P = αN, this disturbance "
+            "does not average out: the memories act as random couplings and the network turns into a disordered, "
+            "glass-like system. Recall survives up to α<sub>c</sub> ≈ 0.138, i.e. about 0.138·N random memories "
+            "(Amit, Gutfreund, Sompolinsky); above it, only spurious states are left. Its rigorous solution at low "
+            "temperature is still open (third tab). Open the [[hopfield|Hopfield]] entry for the formulas. "
+            "Next tab: this network is a restricted Boltzmann machine in disguise."))
 
         practice = Practice("Can you find something when you only remember half of it?", rows=[
             ("The idea", "A <b>content-addressable memory</b> retrieves a stored item from a piece of its content, "

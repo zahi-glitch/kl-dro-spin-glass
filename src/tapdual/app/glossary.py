@@ -110,10 +110,23 @@ ENTRIES: dict[str, tuple[str, list]] = {
     "hopfield": ("Hopfield model", [
         ("p", "An associative memory: P patterns ξ<sup>1</sup>, …, ξ<sup>P</sup> ∈ {−1, +1}<sup>N</sup> are stored in the couplings by Hebb's rule, "
               "and the energy is low near each stored pattern. With P = 1 it is the Curie–Weiss model in disguise "
-              "(flip σ<sub>i</sub> ↦ ξ<sub>i</sub>σ<sub>i</sub>); with P proportional to N it becomes glassy."),
+              "(flip σ<sub>i</sub> ↦ ξ<sub>i</sub>σ<sub>i</sub>); with P proportional to N it becomes glassy (see below)."),
         ("eq", r"$H_N(\sigma)=-\frac{N}{2}\sum_{\mu=1}^{P} m_\mu(\sigma)^2,\qquad m_\mu(\sigma)=\frac{1}{N}\sum_i\xi_i^\mu\sigma_i$"),
         ("p", "Low load (P fixed): the free energy is a supremum over the overlaps, a P-dimensional Curie–Weiss formula."),
         ("eq", r"$\lim\frac{1}{N}\log Z_N=\sup_{m\in\mathbb{R}^P}\left\{-\frac{\beta|m|^2}{2}+\mathbb{E}_\xi\log 2\cosh(\beta\, m\cdot\xi)\right\}$"),
+        ("p", "<b>Many patterns.</b> Write the local field felt by neuron i when the network sits on pattern ξ<sup>1</sup>: "
+              "the signal from ξ<sup>1</sup> plus the <i>cross-talk</i> of all the other patterns. The cross-talk is a sum "
+              "of about P·N random ±1 terms divided by N, so it behaves like Gaussian noise of variance about α = P/N."),
+        ("eq", r"$h_i=\xi^1_i+\frac{1}{N}\sum_{\mu\geq 2}\sum_{j\neq i}\xi^\mu_i\xi^\mu_j\xi^1_j,\qquad \mathrm{cross\ talk}\approx\mathcal{N}(0,\alpha),\quad \alpha=P/N$"),
+        ("p", "If P stays fixed while N grows, the noise vanishes and recall is perfect. If P grows with N, P = αN, "
+              "the noise stays: the stored patterns act as random couplings for each other and the model becomes a "
+              "disordered system, a close cousin of the SK spin glass. At zero temperature (Amit, Gutfreund, "
+              "Sompolinsky): for α &lt; 0.05 the memories are the deepest valleys; for 0.05 &lt; α &lt; 0.138 they "
+              "are still valleys, with a few bits wrong (overlap ≈ 0.97 at the edge, i.e. under 2% of the bits), but no longer the "
+              "deepest; above α<sub>c</sub> ≈ 0.138 they disappear and only glassy, spurious states remain."),
+        ("p", "Mathematically, with P growing the free energy is no longer a sup over a fixed number of overlaps. "
+              "The replica-symmetric formula is proved at high temperature or small α (Pastur, Shcherbina, Tirozzi; "
+              "Talagrand); the low-temperature, high-load regime, where retrieval lives, is still open."),
     ]),
     "hebb": ("Hebb's rule", [
         ("p", "'Neurons that fire together wire together': the coupling between two neurons is the correlation of "
