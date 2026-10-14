@@ -316,6 +316,15 @@ class FrustrationTriangle(QWidget):
                 self.s[k] *= -1; self.update(); return
 
 
+def formula(latex: str, size: int = 15) -> QLabel:
+    """A typeset formula (matplotlib mathtext, rendered offline)."""
+    from PySide6.QtGui import QPixmap
+    from .glossary import formula_png
+    pm = QPixmap(); pm.loadFromData(formula_png(latex, size)); pm.setDevicePixelRatio(220 / 96)
+    img = QLabel(); img.setPixmap(pm); img.setAlignment(Qt.AlignHCenter); img.setStyleSheet("padding: 4px 0;")
+    return img
+
+
 class FitStack(QStackedWidget):
     """A stacked widget whose height is that of the current page, not of the tallest one."""
 

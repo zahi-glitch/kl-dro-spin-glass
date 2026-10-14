@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (QListWidget, QListWidgetItem, QMainWindow, QScrol
 from .sections import CurieWeissSection, HopfieldSection
 from .story import DisorderSection, StatMechSection
 from .references import reading_card
+from .robust import RobustSection
 from .widgets import GlossaryDialog, label, set_glossary_opener
 
 CHAPTERS = [
@@ -15,7 +16,7 @@ CHAPTERS = [
     ("2", "Order: Curie–Weiss", CurieWeissSection),
     ("3", "Disorder: spin glasses", DisorderSection),
     ("4", "Memory: Hopfield networks", HopfieldSection),
-    ("5", "Robust decisions", None),
+    ("5", "Robust decisions", RobustSection),
 ]
 
 

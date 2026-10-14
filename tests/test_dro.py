@@ -69,3 +69,19 @@ def test_linear_rem_threshold():
     d = solve_dual(rem(2.0))                                  # low temperature
     assert abs(d.value - (2.0 * np.sqrt(2 * LOG2) - LOG2)) < 1e-8
     assert abs(d.m - np.sqrt(2 * LOG2) / 2.0) < 1e-8
+
+
+def test_linear_kl_dro_primal_equals_dual():
+    """Worst-case mean over a KL ball: Gibbs tilt (sup) = inf over the temperature lambda."""
+    from scipy.optimize import minimize_scalar
+    from tapdual.dro import load_returns, worst_case_mean, worst_case_mean_dual
+    losses = -load_returns()
+    for rho in (0.01, 0.1, 0.5, 2.0):
+        r = worst_case_mean(losses, rho)
+        assert abs(r.kl - rho) < 1e-9 and not r.frozen
+        dual = minimize_scalar(lambda u: worst_case_mean_dual(losses, np.exp(u), rho),
+                               bounds=(-8, 6), method="bounded", options={"xatol": 1e-12})
+        assert abs(dual.fun - r.value) < 1e-7
+        assert abs(worst_case_mean_dual(losses, r.lam, rho) - r.value) < 1e-9
+    frozen = worst_case_mean(losses, 10.0)
+    assert frozen.frozen and frozen.value == losses.max()

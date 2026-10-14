@@ -34,7 +34,10 @@ Each section opens with what we saw so far, what changes now, and the question i
    REM (freezing, the entropy budget).
 4. **Memory: Hopfield networks.** Storage and retrieval; the same network as a restricted
    Boltzmann machine; storage capacity and what is still open.
-5. **Robust decisions** (in progress).
+5. **Robust decisions.** KL-constrained DRO on 756 daily returns: the worst case is a Gibbs
+   tilt of the data with temperature λ, and freezes onto the worst days as the budget grows.
+   With mean–variance risk the non-linearity is concave and the sup becomes a Parisi-type inf
+   over (q, m), checked live against a direct solution of the sup; plus a physics ↔ DRO dictionary.
 
 Each section ends with two or three references for further reading. Blue words open a glossary entry with typeset formulas (rendered offline with matplotlib).
 
