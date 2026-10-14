@@ -2,17 +2,21 @@
 
 From statistical mechanics to robust optimisation. A desktop app that tells the story order → disorder → memory → decisions (Curie–Weiss, spin glasses, Hopfield), and a Python package showing that for REM-type approximations of TAP free energies the Parisi formula is the Lagrangian dual of a KL-constrained sup, with a robust-portfolio backtest on 28 years of real stock data.
 
-> Status: work in progress, built step by step.
+## What is in this repository
 
-## Outline (to be written)
+| part | what it is | where |
+|---|---|---|
+| Python package | both sides of the duality of [KSS23](https://doi.org/10.1088/1751-8121/acdf30): the sup over measures with an entropy budget and its Parisi-type inf over (q, m), checked against each other | `src/tapdual/` |
+| Desktop app | an educational tour: statistical mechanics, Curie–Weiss, spin glasses, Hopfield, robust decisions, with live simulations and a glossary with formulas | `python -m tapdual.app` |
+| Case study | KL-robust portfolios on 28 years of real US stock prices, with an honest reading | below, and `results/backtest/` |
+| Paper trading | today's portfolios from live prices and a virtual $10,000 followed over time | `scripts/today.py`, app section 5 |
+| Browser dashboards | an earlier, browser-only version of the duality check | `docs/` |
+| Tests | 90+ automated checks (duality, simulations, backtest, app) | `tests/`, run with `pytest` |
 
-1. The puzzle: free energies are naturally a **sup** over measures, yet for the
-   SK model we only have an **inf** (the Parisi formula).
-2. The ML/DRO view: KL-constrained worst-case expectations and their duals.
-3. The REM/GREM approximation of TAP free energies: a non-linear model where
-   both the sup and the inf are proved.
-4. The dictionary: Parisi parameters as Lagrange multipliers.
-5. Numerical primal-dual check and the phase transition.
+The idea in one sentence: free energies are a **sup** over probability measures, the Parisi formula is
+an **inf**; in REM-type approximations of TAP free energies the two are Lagrange duals, and the Parisi
+parameter m is the price of an entropy budget, which is exactly how KL-robust optimisation prices
+distrust in data.
 
 ## Case study: KL-robust portfolios on 28 years of US stocks
 
@@ -90,6 +94,12 @@ In the app, section 5 has three sub-pages in the sidebar:
   each strategy; every time you come back it shows what each is worth, day by day (monthly rebalancing,
   no look-ahead, 0.1% costs). Only the start date is saved (`paper_trading/virtual_portfolio.json`).
 
+**Automatic tracking.** The workflow `.github/workflows/paper-trading.yml` runs `scripts/track.py` on GitHub
+every weekday after the US close (no computer needed): it follows the virtual $10,000
+(`paper_trading/virtual_report.md`, `virtual_values.csv`) and, once a month, saves the four portfolios to
+`paper_trading/log.csv`, committing the results. Run `git pull` to see them locally, or start it by hand from
+the repository's **Actions** tab.
+
 The same from the command line:
 
 `scripts/today.py` downloads the latest prices from Yahoo Finance (free, via `yfinance`), computes
@@ -135,7 +145,7 @@ Each section opens with what we saw so far, what changes now, and the question i
 
 Each section ends with two or three references for further reading. Blue words open a glossary entry with typeset formulas (rendered offline with matplotlib).
 
-## Dashboard
+## Browser dashboards (earlier version)
 
 Two interactive pages in `docs/`, computed live in the browser by `docs/solver.js`,
 a JavaScript port of the Python package (checked against it by

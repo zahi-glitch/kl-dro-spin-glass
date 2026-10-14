@@ -46,3 +46,19 @@ def test_virtual_investment(prices_csv, tmp_path, monkeypatch):
         assert np.allclose(v_short.values[name], v.values[name][:60])
     live.start_virtual(prices)
     assert live.load_virtual()[0] == prices.index[-1].date()
+
+
+def test_track_script(prices_csv, tmp_path, monkeypatch):
+    """The automatic tracker starts the virtual investment, writes the report, and logs once per month."""
+    import importlib.util
+    from pathlib import Path
+    from tapdual import live
+    monkeypatch.setenv("TAPDUAL_PRICES_CSV", str(prices_csv))
+    monkeypatch.setattr(live, "VIRTUAL", tmp_path / "virtual_portfolio.json")
+    monkeypatch.setattr(live, "LOG", tmp_path / "log.csv")
+    spec = importlib.util.spec_from_file_location("track", Path(__file__).resolve().parents[1] / "scripts" / "track.py")
+    track = importlib.util.module_from_spec(spec); spec.loader.exec_module(track)
+    track.main(); track.main()
+    assert (tmp_path / "virtual_report.md").exists() and (tmp_path / "virtual_values.csv").exists()
+    lines = (tmp_path / "log.csv").read_text().strip().splitlines()
+    assert len(lines) == 1 + len(live.STRATEGIES)        # header + one entry: the second run did not log again
