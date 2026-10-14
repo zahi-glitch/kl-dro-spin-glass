@@ -22,9 +22,9 @@ long-only, with 10 bps transaction costs. All parameters were fixed before looki
 
 **Headline: the Parisi-type dual makes the robust portfolio 60–70× faster to compute.** The same
 robust mean–variance backtest takes about 1 s with the dual and about 67 s with a generic conic solver
-(CVXPY + Clarabel; timings vary a little between runs), and returns the same portfolios (weights differ by at most 10⁻⁴). One worst case
-costs a few milliseconds whatever the window length; the conic solver slows down from 7 ms to 1.4 s
-as the window grows to 16 years, and occasionally fails to converge.
+(CVXPY + Clarabel; timings vary a little between runs), and returns the same portfolios (weights differ
+by at most 10⁻⁴). One worst case costs a few milliseconds whatever the window length; the conic solver
+slows down from 7 ms to 1.4 s as the window grows to 16 years, and occasionally fails to converge.
 
 ![speed](results/backtest/speed.png)
 
@@ -37,6 +37,7 @@ The investment results:
 |---|---|---|---|---|---|
 | Equal weight | 18.9% | 22.3% | 0.89 | −57.8% | 0.00 |
 | Markowitz (mean − γ·variance) | 20.0% | 21.6% | 0.95 | −48.9% | 0.28 |
+| Minimum variance | 15.6% | 16.9% | 0.94 | −38.5% | 0.07 |
 | Robust mean (KL ball = EVaR) | 17.5% | 17.9% | 0.99 | −38.8% | 0.16 |
 | **Robust mean–variance (KSS23 dual)** | 17.2% | 17.4% | 1.00 | −39.0% | 0.14 |
 
@@ -48,28 +49,32 @@ non-linear problem of [KSS23](https://doi.org/10.1088/1751-8121/acdf30), solved 
 dual in two scalars (q, m); the portfolio gradient comes for free from the worst-case weights
 (Danskin's theorem).
 
-Takeaways:
+How to read the results:
 
-- **Less risk for a little return.** The robust portfolios cut volatility by about a fifth, the
-  maximum drawdown from −49%/−58% to −39%, and turnover by half, for 1.7–2.8 points of annual return;
-  risk-adjusted return is slightly higher. In the dot-com crash: −25% against −44% for Markowitz.
-- **No tuning of risk aversion needed.** Markowitz swings from 29% to 17% volatility as γ goes from 0.02
-  to 0.2; the robust portfolio stays at 17–18% for every γ and every budget ρ tried
-  ([sensitivity](results/backtest/sensitivity.png)).
-- **Exact and fast.** Why the dual is fast: the sup over 504 day-weights becomes an inf over two
-  numbers (q, m), and the portfolio gradient is read off the worst-case weights. It agrees with the
-  conic solver to 10⁻⁸ and, unlike it, has no convergence failures on long windows.
-- **Honest limits.** Here the non-linear (mean–variance) robust portfolio performs like the linear one
-  (EVaR): its edge in this experiment is computational (figure above), not higher returns. The universe has
-  survivorship bias (well-known companies chosen today), returns are against a zero risk-free rate,
-  and it is one dataset.
+- **At the default budget, robust ≈ minimum variance.** Within a KL budget ρ the adversary can lower
+  each asset's average daily return by about √(2ρ) standard deviations: 0.3σ at ρ = 0.05 per day, far
+  more than any real daily average. The averages then carry almost no information, and the robust
+  portfolio behaves like a minimum-variance portfolio with a small tilt towards return. Its lower risk
+  compared with Markowitz is mostly the lower risk of minimum variance.
+- **ρ is a dial between Markowitz and minimum variance.** Small budgets keep the portfolio close to
+  Markowitz, large ones push it to minimum variance; choosing ρ is choosing how much to trust past
+  average returns. Along the whole dial the Sharpe ratio stays at 0.98–1.00, a little above both ends
+  (0.95 and 0.94): a modest gain, on one dataset.
+  ![the budget as a dial](results/backtest/sensitivity.png)
+- **Exact and fast.** The sup over 504 day-weights becomes an inf over two numbers (q, m), and the
+  portfolio gradient is read off the worst-case weights. It agrees with the conic solver to 10⁻⁸ and,
+  unlike it, has no convergence failures on long windows.
+- **Honest limits.** No clear performance edge over minimum variance; the non-linear (mean–variance)
+  version performs like the linear one (EVaR), so its edge here is computational. Survivorship bias
+  (well-known companies chosen today), zero risk-free rate, one dataset. The insensitivity to the risk
+  aversion γ is a symptom of the KL term dominating, not a feature.
 
 Full tables, crisis returns and sensitivities: [`results/backtest/summary.md`](results/backtest/summary.md).
 Reproduce:
 
 ```bash
 pip install -e ".[backtest]"       # pandas, matplotlib, cvxpy
-python scripts/backtest.py         # about 8 minutes (most of it timing the conic solver); writes results/backtest/
+python scripts/backtest.py         # about 10 minutes (most of it timing the conic solver); writes results/backtest/
 ```
 
 Data: [`data/`](data/README.md), from PyPortfolioOpt (MIT licence).
@@ -86,8 +91,10 @@ pip install -e ".[live]"
 python scripts/today.py
 ```
 
-Default universe: ten liquid ETFs, one per major asset class (US, developed and emerging stocks, US real
-estate, short/medium/long US government bonds, corporate bonds, gold, commodities). Window and settings
+Default universe: nine liquid ETFs, one per major asset class (US, developed and emerging stocks, US real
+estate, medium/long US government bonds, corporate bonds, gold, commodities). There is deliberately no
+cash-like fund: at the default budget the robust portfolio behaves like minimum variance (see the case
+study), so with a near-cash fund available it would simply hold that. Window and settings
 are the backtest's. Use `--tickers` to change the assets.
 
 ## Desktop app

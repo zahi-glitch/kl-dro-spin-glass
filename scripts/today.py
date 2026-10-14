@@ -9,7 +9,9 @@ paper_trading/log.csv, so after a few months you have a real out-of-sample recor
 This is an educational tool, not investment advice.
 
 Defaults, chosen once and kept fixed:
-  universe  ten liquid ETFs, one per major asset class (see UNIVERSE below)
+  universe  nine liquid ETFs, one per major asset class (see UNIVERSE below). No cash-like fund: with one,
+            the robust portfolio simply goes to cash, because at this budget it behaves like a
+            minimum-variance portfolio (see results/backtest/summary.md).
   window    the last 504 trading days (two years) of daily returns
   settings  the same as the backtest: gamma = 0.05, rho = 0.05, tau = 0.1
 """
@@ -32,7 +34,6 @@ UNIVERSE = {
     "VNQ": "US real estate",
     "TLT": "long-term US government bonds",
     "IEF": "medium-term US government bonds",
-    "SHY": "short-term US government bonds (near cash)",
     "LQD": "US corporate bonds",
     "GLD": "gold",
     "DBC": "commodities",
@@ -41,6 +42,7 @@ WINDOW, GAMMA, RHO, TAU = 504, 0.05, 0.05, 0.1
 STRATEGIES = [
     Strategy("Equal weight", "equal"),
     Strategy("Markowitz", "markowitz", gamma=GAMMA),
+    Strategy("Minimum variance", "minvar"),
     Strategy("Robust mean-variance", "robust_mv", gamma=GAMMA, rho=RHO, tau=TAU),
 ]
 LOG = Path(__file__).resolve().parents[1] / "paper_trading" / "log.csv"
@@ -88,13 +90,16 @@ def main():
     R = 100.0 * (P[1:] / P[:-1] - 1.0)[-WINDOW:]       # last two years of daily returns, in %
 
     print(f"\nPrices up to {as_of}; estimation window: the last {len(R)} trading days.")
+    print(f"Budget ρ = {RHO}: the adversary may lower each fund's average daily return by about "
+          f"{np.sqrt(2 * RHO):.2f} standard deviations, which is more than any fund's real daily average, "
+          f"so the robust portfolio stays close to minimum variance.")
     print("Educational tool, not investment advice.\n")
     weights = {s.name: s.weights(R) for s in STRATEGIES}
 
     width = max(len(t) for t in tickers)
-    print(" " * (width + 2) + "".join(f"{s.name:>22}" for s in STRATEGIES) + "   asset")
+    print(" " * (width + 2) + "".join(f"{s.name:>21}" for s in STRATEGIES) + "   asset")
     for i, t in enumerate(tickers):
-        print(f"{t:<{width + 2}}" + "".join(f"{100 * weights[s.name][i]:>21.1f}%" for s in STRATEGIES)
+        print(f"{t:<{width + 2}}" + "".join(f"{100 * weights[s.name][i]:>20.1f}%" for s in STRATEGIES)
               + f"   {UNIVERSE.get(t, '')}")
 
     x = weights["Robust mean-variance"]

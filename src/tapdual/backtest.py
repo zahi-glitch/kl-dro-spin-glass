@@ -7,6 +7,7 @@ Strategies
 ----------
 equal weight      x = 1/d.
 markowitz         min_x  E_mu[l] + gamma Var_mu(l)                       (mu = empirical, 1/T per day)
+minimum variance  min_x  Var_mu(l)                                       (ignores average returns)
 robust mean       min_x  sup { E_nu[l] : H(nu | mu) <= rho }            (= entropic value-at-risk, EVaR)
 robust mean-var   min_x  sup { E_nu[l] + gamma Var_nu(l) - tau H(nu | mu) : H(nu | mu) <= rho }
 
@@ -120,7 +121,7 @@ def robust_mean_variance_objective_conic(R, x, gamma, rho, tau, solver: ConicWor
 @dataclass(frozen=True)
 class Strategy:
     name: str
-    kind: str                     # "equal", "markowitz", "robust_mean", "robust_mv", "robust_mv_conic"
+    kind: str                     # "equal", "markowitz", "minvar", "robust_mean", "robust_mv", "robust_mv_conic"
     gamma: float = 0.05
     rho: float = 0.05
     tau: float = 0.1
@@ -131,6 +132,9 @@ class Strategy:
             return np.full(d, 1.0 / d)
         if self.kind == "markowitz":
             return _simplex_minimise(lambda x: markowitz_objective(R, x, self.gamma), d, x0)
+        if self.kind == "minvar":
+            S = np.cov(R, rowvar=False, bias=True)
+            return _simplex_minimise(lambda x: (x @ S @ x, 2 * S @ x), d, x0)
         if self.kind == "robust_mean":
             return _simplex_minimise(lambda x: robust_mean_objective(R, x, self.rho), d, x0)
         if self.kind == "robust_mv":

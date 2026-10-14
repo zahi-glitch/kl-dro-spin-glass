@@ -27,14 +27,17 @@ GAMMA, RHO, TAU = 0.05, 0.05, 0.1
 MAIN = [
     Strategy("Equal weight", "equal"),
     Strategy("Markowitz", "markowitz", gamma=GAMMA),
+    Strategy("Minimum variance", "minvar"),
     Strategy("Robust mean (EVaR)", "robust_mean", rho=RHO),
     Strategy("Robust mean-variance (KSS23 dual)", "robust_mv", gamma=GAMMA, rho=RHO, tau=TAU),
 ]
-COLORS = ["#8a8983", "#eb6834", "#7f77dd", "#2a78d6"]
+COLORS = ["#8a8983", "#eb6834", "#1D9E75", "#7f77dd", "#2a78d6"]
+RHOS = (0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1)
 
 
 def fmt(k, v):
-    pct = {"annual return", "annual volatility", "max drawdown", "worst day", "CVaR 5% (daily)"}
+    pct = {"annual return", "annual volatility", "max drawdown", "worst day", "CVaR 5% (daily)",
+           "differs from min. variance", "differs from Markowitz"}
     return f"{100 * v:.1f}%" if k in pct else f"{v:.2f}"
 
 
@@ -143,21 +146,33 @@ def plots(results, sens_rho, sens_gamma):
     ax[1].set_ylabel("drawdown"); ax[1].yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
     fig.tight_layout(); fig.savefig(OUT / "equity.png", dpi=160); plt.close(fig)
 
-    fig, ax = plt.subplots(1, 2, figsize=(9, 3.4))
-    for axis, (name, sens, key) in zip(ax, (("KL budget ρ", sens_rho, "rho"), ("risk aversion γ", sens_gamma, "gamma"))):
-        for kind, c, lab in (("robust_mv", COLORS[3], "robust mean-variance"), ("markowitz", COLORS[1], "Markowitz")):
-            pts = [(getattr(r.strategy, key), r.metrics) for r in sens if r.strategy.kind == kind]
-            if not pts:
-                continue
-            xs = [p[0] for p in pts]
-            axis.plot(xs, [-p[1]["max drawdown"] for p in pts], "o-", color=c, label=f"{lab}: max drawdown")
-            axis.plot(xs, [p[1]["annual volatility"] for p in pts], "s--", color=c, alpha=0.7, label=f"{lab}: volatility")
-        axis.set_xlabel(name); axis.set_xscale("log"); axis.minorticks_off()
-        ticks = sorted({getattr(r.strategy, key) for r in sens})
-        axis.set_xticks(ticks); axis.set_xticklabels([f"{t:g}" for t in ticks])
-        axis.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
-    ax[1].legend(frameon=False, fontsize=7, loc="upper right")
+    if not sens_rho:
+        return
+    by = {r.strategy.name: r for r in results}
+    rhos = [r.strategy.rho for r in sens_rho]
+    fig, ax = plt.subplots(1, 2, figsize=(9.5, 3.6))
+    ax[0].plot(rhos, [r.metrics["differs from min. variance"] for r in sens_rho], "o-", color=COLORS[2],
+               label="from minimum variance")
+    ax[0].plot(rhos, [r.metrics["differs from Markowitz"] for r in sens_rho], "o-", color=COLORS[1],
+               label="from Markowitz")
+    ax[0].set_ylabel("share of the portfolio held differently"); ax[0].set_ylim(0, None)
+    ax[0].set_title("robust portfolio: who does it resemble?", fontsize=10); ax[0].legend(frameon=False, fontsize=8)
+    for key, style, lab in (("annual return", "o-", "return"), ("annual volatility", "s--", "volatility")):
+        ax[1].plot(rhos, [r.metrics[key] for r in sens_rho], style, color=COLORS[4], label=f"robust: {lab}")
+        for name, c in (("Markowitz", COLORS[1]), ("Minimum variance", COLORS[2])):
+            ax[1].axhline(by[name].metrics[key], color=c, lw=1, ls=":" if key == "annual volatility" else "-")
+    ax[1].set_title("return and volatility (lines: Markowitz, min. variance)", fontsize=10)
+    ax[1].legend(frameon=False, fontsize=8)
+    for a_ in ax:
+        a_.set_xscale("log"); a_.minorticks_off(); a_.set_xticks(rhos)
+        a_.set_xticklabels([f"{r:g}" for r in rhos], rotation=45); a_.set_xlabel("KL budget ρ (per day)")
+        a_.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
     fig.tight_layout(); fig.savefig(OUT / "sensitivity.png", dpi=160); plt.close(fig)
+
+
+def distance(a, b) -> float:
+    """Average share of the portfolio held differently: half the L1 distance between weights, per rebalance."""
+    return float(0.5 * np.abs(a.weights - b.weights).sum(1).mean())
 
 
 def main():
@@ -176,8 +191,11 @@ def main():
 
     sens_rho, sens_gamma = [], []
     if not a.quick:
-        sens_rho = [backtest(Strategy(f"rho={r}", "robust_mv", gamma=GAMMA, rho=r, tau=TAU), dates, R)
-                    for r in (0.01, 0.02, 0.05, 0.1, 0.2)]
+        by = {r.strategy.name: r for r in results}
+        sens_rho = [backtest(Strategy(f"rho={r}", "robust_mv", gamma=GAMMA, rho=r, tau=TAU), dates, R) for r in RHOS]
+        for r in sens_rho:
+            r.metrics["differs from min. variance"] = distance(r, by["Minimum variance"])
+            r.metrics["differs from Markowitz"] = distance(r, by["Markowitz"])
         sens_gamma = [backtest(Strategy(f"{k} gamma={g}", k, gamma=g, rho=RHO, tau=TAU), dates, R)
                       for g in (0.02, 0.05, 0.1, 0.2) for k in ("markowitz", "robust_mv")]
     plots(results, sens_rho, sens_gamma)
@@ -194,7 +212,13 @@ def main():
         "![wealth and drawdown](equity.png)",
     ]
     if sens_rho:
-        report += ["## Sensitivity to the KL budget ρ (robust mean-variance)", table(sens_rho),
+        report += ["## Sensitivity to the KL budget ρ (robust mean-variance)",
+                   "How big is a budget? Within H(ν | μ) ≤ ρ the adversary can lower an asset's average daily "
+                   "return by about √(2ρ) daily standard deviations: 0.32σ at ρ = 0.05, 0.03σ at ρ = 0.0005. "
+                   "Daily means are only a few hundredths of σ, so a large budget wipes out the information in the "
+                   "averages and the robust portfolio becomes a minimum-variance portfolio; a small budget brings it "
+                   "back towards Markowitz.",
+                   table(sens_rho),
                    "## Sensitivity to the risk aversion γ", table(sens_gamma), "![sensitivity](sensitivity.png)"]
     report += ["## Speed: the dual against a generic conic solver", speed_study(dates, R)]
     (OUT / "summary.md").write_text("\n\n".join(report) + "\n")
@@ -206,6 +230,7 @@ def main():
         "period": [first, last], "universe": tickers, "gamma": GAMMA, "rho": RHO, "tau": TAU,
         "window": 504, "step": 21, "cost_bps": 10,
         "metrics": {r.strategy.name: r.metrics for r in results}, "crises": crises, "speed": SPEED,
+        "rho_sweep": [{"rho": r.strategy.rho, **r.metrics} for r in sens_rho],
     }, indent=2))
     print(f"written to {OUT}")
 

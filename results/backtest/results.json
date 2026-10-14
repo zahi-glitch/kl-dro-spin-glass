@@ -42,6 +42,16 @@
       "turnover / rebalance": 0.2831262162999616,
       "effective holdings": 3.0659777460971513
     },
+    "Minimum variance": {
+      "annual return": 0.15622763271517126,
+      "annual volatility": 0.1688724983170584,
+      "Sharpe (rf = 0)": 0.9441897463392204,
+      "max drawdown": -0.3846987618572938,
+      "worst day": -0.08272881893918814,
+      "CVaR 5% (daily)": 0.023905644357853403,
+      "turnover / rebalance": 0.07470780129542584,
+      "effective holdings": 4.227512302939217
+    },
     "Robust mean (EVaR)": {
       "annual return": 0.1751998653802307,
       "annual volatility": 0.17875738114583029,
@@ -67,12 +77,14 @@
     "Dot-com crash 2000-02": {
       "Equal weight": -0.39929504175169994,
       "Markowitz": -0.4398313155828346,
+      "Minimum variance": -0.16642770846010602,
       "Robust mean (EVaR)": -0.30112420164993414,
       "Robust mean-variance (KSS23 dual)": -0.2551402934317498
     },
     "Financial crisis 2007-09": {
       "Equal weight": -0.5689702078912104,
       "Markowitz": -0.38586512339090484,
+      "Minimum variance": -0.3686032327098049,
       "Robust mean (EVaR)": -0.38498188159170066,
       "Robust mean-variance (KSS23 dual)": -0.38293589320490384
     }
@@ -87,20 +99,20 @@
       4032
     ],
     "dual_ms": [
-      1.654638000019304,
-      2.7906889999940176,
-      3.4707410000009986,
-      2.6440809999996873,
-      4.397691999997733,
-      7.8007299999853785
+      1.7718469999863373,
+      1.951896999969449,
+      2.411717999962093,
+      2.965137000046525,
+      4.700887000012699,
+      6.149004999997487
     ],
     "conic_ms": [
-      7.053866000006792,
-      20.613577999995414,
-      26.6892470000073,
-      42.48454399998991,
-      142.48115899999902,
-      1426.9881470000314
+      7.305119999955423,
+      16.14817900002663,
+      24.082588999988275,
+      42.49533999995947,
+      168.9132230000041,
+      1202.7623989999938
     ],
     "conic_failures": [
       0,
@@ -111,9 +123,115 @@
       1
     ],
     "reps": 5,
-    "backtest_dual_s": 0.9581120014190674,
-    "backtest_conic_s": 67.28352236747742,
+    "backtest_dual_s": 1.1222255229949951,
+    "backtest_conic_s": 68.95203924179077,
     "rebalances": 24,
     "max_weight_difference": 0.00010742615987663351
-  }
+  },
+  "rho_sweep": [
+    {
+      "rho": 0.0005,
+      "annual return": 0.19490055469126766,
+      "annual volatility": 0.20396296511737516,
+      "Sharpe (rf = 0)": 0.9752475033457234,
+      "max drawdown": -0.4566761426417547,
+      "worst day": -0.09598174792775194,
+      "CVaR 5% (daily)": 0.02880769278802792,
+      "turnover / rebalance": 0.25892936341212486,
+      "effective holdings": 3.35080705226893,
+      "differs from min. variance": 0.476524085805311,
+      "differs from Markowitz": 0.08367282927618652
+    },
+    {
+      "rho": 0.001,
+      "annual return": 0.19278458741751137,
+      "annual volatility": 0.20005821209262054,
+      "Sharpe (rf = 0)": 0.9814674478799604,
+      "max drawdown": -0.44486416859131517,
+      "worst day": -0.09643588187235073,
+      "CVaR 5% (daily)": 0.02827327787677018,
+      "turnover / rebalance": 0.24989642311352522,
+      "effective holdings": 3.4458664616846777,
+      "differs from min. variance": 0.4517208880727647,
+      "differs from Markowitz": 0.11330176403180087
+    },
+    {
+      "rho": 0.002,
+      "annual return": 0.19027514284344238,
+      "annual volatility": 0.19533177266171842,
+      "Sharpe (rf = 0)": 0.9896368158991302,
+      "max drawdown": -0.4295832368607555,
+      "worst day": -0.09697329045074402,
+      "CVaR 5% (daily)": 0.027631138775744257,
+      "turnover / rebalance": 0.2361995182127704,
+      "effective holdings": 3.559943070827987,
+      "differs from min. variance": 0.41849153496950897,
+      "differs from Markowitz": 0.15110049046851512
+    },
+    {
+      "rho": 0.005,
+      "annual return": 0.18509200380868696,
+      "annual volatility": 0.18862430247507828,
+      "Sharpe (rf = 0)": 0.9948441209028206,
+      "max drawdown": -0.4045785661757194,
+      "worst day": -0.09741546356067872,
+      "CVaR 5% (daily)": 0.026732252171191757,
+      "turnover / rebalance": 0.2123399098530268,
+      "effective holdings": 3.711955165572053,
+      "differs from min. variance": 0.3641837227072085,
+      "differs from Markowitz": 0.21143882485074159
+    },
+    {
+      "rho": 0.01,
+      "annual return": 0.18044292283744845,
+      "annual volatility": 0.18365020395639126,
+      "Sharpe (rf = 0)": 0.9953283909685092,
+      "max drawdown": -0.39123633630658716,
+      "worst day": -0.09753546909592373,
+      "CVaR 5% (daily)": 0.026047454975037784,
+      "turnover / rebalance": 0.19099677915106253,
+      "effective holdings": 3.834697720584275,
+      "differs from min. variance": 0.3139637764781922,
+      "differs from Markowitz": 0.26338621217062314
+    },
+    {
+      "rho": 0.02,
+      "annual return": 0.17693645113031553,
+      "annual volatility": 0.17909674809939913,
+      "Sharpe (rf = 0)": 0.9994053693691234,
+      "max drawdown": -0.3897465562380036,
+      "worst day": -0.09525421364327519,
+      "CVaR 5% (daily)": 0.025405408111991525,
+      "turnover / rebalance": 0.16653415347084533,
+      "effective holdings": 3.9586728684399097,
+      "differs from min. variance": 0.2594977375694246,
+      "differs from Markowitz": 0.3165416418215072
+    },
+    {
+      "rho": 0.05,
+      "annual return": 0.17179372217663702,
+      "annual volatility": 0.17449650006091322,
+      "Sharpe (rf = 0)": 0.9959845065496472,
+      "max drawdown": -0.3897118074004121,
+      "worst day": -0.09047459073985901,
+      "CVaR 5% (daily)": 0.024764143186743227,
+      "turnover / rebalance": 0.1399242309781764,
+      "effective holdings": 4.0581881644471665,
+      "differs from min. variance": 0.1939818438180548,
+      "differs from Markowitz": 0.3808173266781998
+    },
+    {
+      "rho": 0.1,
+      "annual return": 0.1692212147266403,
+      "annual volatility": 0.17213458742498272,
+      "Sharpe (rf = 0)": 0.9945006815062944,
+      "max drawdown": -0.39278571917264893,
+      "worst day": -0.08677608967892306,
+      "CVaR 5% (daily)": 0.02439544284515438,
+      "turnover / rebalance": 0.12402897943645504,
+      "effective holdings": 4.08024881050145,
+      "differs from min. variance": 0.15715636990571177,
+      "differs from Markowitz": 0.4223366747082538
+    }
+  ]
 }

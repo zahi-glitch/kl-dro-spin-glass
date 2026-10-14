@@ -355,6 +355,8 @@ class CaseStudyPage(QWidget):
     COLUMNS = (("annual return", "return / year", True), ("annual volatility", "volatility", True),
                ("Sharpe (rf = 0)", "Sharpe", False), ("max drawdown", "max drawdown", True),
                ("turnover / rebalance", "turnover", False))
+    ROBUST, MARKOWITZ, MINVAR, EQUAL = ("Robust mean-variance (KSS23 dual)", "Markowitz", "Minimum variance",
+                                        "Equal weight")
 
     def __init__(self):
         super().__init__()
@@ -362,34 +364,41 @@ class CaseStudyPage(QWidget):
         path = RESULTS / "results.json"
         if not path.exists():
             lay.addWidget(label("No results yet. Run <b>python scripts/backtest.py</b> in the project folder "
-                                "(about 8 minutes) and reopen the app.", "body"))
+                                "(about 10 minutes) and reopen the app.", "body"))
             return
         import json
         res = json.loads(path.read_text())
         M, S = res["metrics"], res["speed"]
-        names = list(M)
-        robust, mark, eq = names[3], names[1], names[0]
+        rob, mk, mv = M[self.ROBUST], M[self.MARKOWITZ], M[self.MINVAR]
         speedup = S["backtest_conic_s"] / S["backtest_dual_s"]
 
         lay.addWidget(label(
             f"Everything so far used one sample of returns. Here the robust portfolio meets real data: daily prices "
             f"of {len(res['universe'])} US stocks, {res['period'][0][:4]}–{res['period'][1][:4]} out of sample, "
             f"through the dot-com crash and 2008. Every month each strategy is re-estimated on the last two years, "
-            f"long-only, paying 0.1% on what it trades. All settings were fixed before looking at the results "
-            f"(γ = {res['gamma']}, ρ = {res['rho']}).", "body"))
+            f"long-only, paying 0.1% on what it trades. Settings fixed before looking at the results "
+            f"(γ = {res['gamma']}, ρ = {res['rho']} per day).", "body"))
 
         head = Card("In three numbers")
         row = QWidget(); rl = QHBoxLayout(row); rl.setContentsMargins(0, 4, 0, 4); rl.setSpacing(28)
-        rl.addWidget(_big(f"{speedup:.0f}×", f"faster with the Parisi-type dual than with a generic solver,<br>"
+        rl.addWidget(_big(f"{speedup:.0f}×", f"faster with the Parisi-type dual than with a<br>generic solver, "
                                              f"same portfolios (weights differ ≤ {S['max_weight_difference']:.0e})"))
-        rl.addWidget(_big(f"{100 * M[robust]['max drawdown']:.0f}%",
-                          f"worst fall from a peak, against {100 * M[mark]['max drawdown']:.0f}% (Markowitz)<br>"
-                          f"and {100 * M[eq]['max drawdown']:.0f}% (equal weight)"))
-        rl.addWidget(_big(f"{100 * M[robust]['annual volatility']:.1f}%",
-                          f"volatility, against {100 * M[mark]['annual volatility']:.1f}% (Markowitz)<br>"
-                          f"and {100 * M[eq]['annual volatility']:.1f}% (equal weight)"))
+        rl.addWidget(_big(f"{100 * rob['max drawdown']:.0f}%",
+                          f"worst fall from a peak, against {100 * mk['max drawdown']:.0f}% for Markowitz,<br>"
+                          f"but close to minimum variance ({100 * mv['max drawdown']:.0f}%)"))
+        rl.addWidget(_big(f"{rob['Sharpe (rf = 0)']:.2f}",
+                          f"Sharpe ratio, against {mv['Sharpe (rf = 0)']:.2f} (minimum variance)<br>"
+                          f"and {mk['Sharpe (rf = 0)']:.2f} (Markowitz)"))
         rl.addStretch(1)
         head.add(row)
+
+        honest = Card("The honest reading")
+        honest.add(label(
+            "With a budget of ρ = 0.05 per day, the adversary can lower every asset's average daily return by about "
+            "√(2ρ) ≈ 0.3 standard deviations, far more than any real daily average. The averages then carry no "
+            "information and the robust portfolio behaves like a <b>minimum-variance</b> portfolio, with a small "
+            "tilt towards return. Its lower risk compared with Markowitz is mostly the lower risk of minimum "
+            "variance. The budget ρ is the dial between the two: the chart below.", "body"))
 
         speed = Card("Why the dual matters in practice: speed",
                      "Left: time for one worst case as the data window grows. Right: the same robust backtest "
@@ -397,14 +406,20 @@ class CaseStudyPage(QWidget):
                      f"{S['backtest_dual_s']:.1f} s with the dual, {S['backtest_conic_s']:.0f} s with CVXPY + Clarabel.")
         speed.add(Picture(RESULTS / "speed.png"))
 
-        table = Card("Results, 1992–2018")
+        dial = Card("The budget ρ: a dial from Markowitz to minimum variance",
+                    "Left: how much of the robust portfolio is held differently from each benchmark. Right: its "
+                    "return (solid) and volatility (dashed), with Markowitz (orange) and minimum variance (green) "
+                    "as horizontal lines: solid for return, dotted for volatility.")
+        dial.add(Picture(RESULTS / "sensitivity.png"))
+
+        table = Card(f"Results, {res['period'][0][:4]}–{res['period'][1][:4]}")
         grid = QWidget(); g = QGridLayout(grid); g.setContentsMargins(0, 0, 0, 0); g.setHorizontalSpacing(18)
         g.addWidget(label("<b>strategy</b>", "small"), 0, 0)
         for c, (_, title, _) in enumerate(self.COLUMNS, 1):
             g.addWidget(label(f"<b>{title}</b>", "small", wrap=False), 0, c, Qt.AlignRight)
-        for r, name in enumerate(names, 1):
-            bold = name == robust
-            short = name.replace(" (KSS23 dual)", "").replace(" (EVaR)", " (EVaR)")
+        for r, name in enumerate(M, 1):
+            bold = name == self.ROBUST
+            short = name.replace(" (KSS23 dual)", "")
             g.addWidget(label(f"<b>{short}</b>" if bold else short, "body", wrap=False), r, 0)
             for c, (key, _, pct) in enumerate(self.COLUMNS, 1):
                 v = M[name][key]
@@ -416,24 +431,25 @@ class CaseStudyPage(QWidget):
             table.add(label(f"<b>{crisis}:</b> " + ", ".join(f"{k.split(' (')[0]} {100 * v:+.0f}%" for k, v in vals.items()),
                             "small"))
 
-        wealth = Card("Wealth and drawdown", "Log scale. The robust portfolios fall less in both crashes.")
+        wealth = Card("Wealth and drawdown", "Log scale.")
         wealth.add(Picture(RESULTS / "equity.png"))
 
         practice = Practice("What would I tell a portfolio manager?", rows=[
-            ("Result", f"The robust portfolio gives up {100 * (M[eq]['annual return'] - M[robust]['annual return']):.1f}–"
-                       f"{100 * (M[mark]['annual return'] - M[robust]['annual return']):.1f} points of return a year "
-                       "for about a fifth less volatility, a much smaller worst fall and half the trading."),
-            ("Bonus", "It does not need a carefully tuned risk aversion: its risk barely moves when γ changes, "
-                      "while Markowitz swings from 29% to 17% volatility."),
+            ("Result", "At the default budget the robust portfolio is essentially minimum variance with a small "
+                       f"tilt towards return: similar risk, slightly higher return and Sharpe "
+                       f"({rob['Sharpe (rf = 0)']:.2f} against {mv['Sharpe (rf = 0)']:.2f}), more trading."),
+            ("The dial", "The budget ρ moves it continuously from Markowitz (small ρ) to minimum variance "
+                         "(large ρ). Choosing ρ is choosing how much to trust past average returns."),
             ("Where the maths helps", "The worst case is an inf over two numbers (q, m) instead of a sup over "
                                       "504 day-weights: exact, and fast enough to run inside the optimiser."),
-            ("Honest limits", "Here the mean–variance version behaves like the simpler robust mean (EVaR); its "
-                              "edge is computational. Survivorship bias (well-known stocks), zero risk-free rate, "
-                              "one dataset."),
+            ("Honest limits", "No clear performance edge over minimum variance; survivorship bias (well-known "
+                              "stocks), zero risk-free rate, one dataset."),
         ])
         lay.addWidget(head)
+        lay.addWidget(honest)
         lay.addWidget(speed)
-        lay.addWidget(_two_columns(_column(wealth), _column(table, practice)))
+        lay.addWidget(dial)
+        lay.addWidget(_two_columns(_column(table, practice), _column(wealth)))
 
 
 # --------------------------------------------------------------------------- section
