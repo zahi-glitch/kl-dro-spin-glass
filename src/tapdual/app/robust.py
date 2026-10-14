@@ -322,17 +322,18 @@ RESULTS = Path(__file__).resolve().parents[3] / "results" / "backtest"
 
 
 class Picture(QWidget):
-    """An image that scales to the available width and keeps its aspect ratio."""
+    """An image that scales to the available width (up to max_width), keeps its aspect ratio, centred."""
 
-    def __init__(self, path):
+    def __init__(self, path, max_width=900):
         super().__init__()
-        self.pm = QPixmap(str(path))
+        self.pm, self.max_width = QPixmap(str(path)), max_width
         sp = self.sizePolicy(); sp.setHeightForWidth(True); self.setSizePolicy(sp)
 
     def hasHeightForWidth(self):
         return True
 
     def heightForWidth(self, w):
+        w = min(w, self.max_width)
         return int(w * self.pm.height() / max(self.pm.width(), 1))
 
     def sizeHint(self):
@@ -340,8 +341,8 @@ class Picture(QWidget):
 
     def paintEvent(self, e):
         p = QPainter(self); p.setRenderHint(QPainter.SmoothPixmapTransform)
-        w = self.width(); h = self.heightForWidth(w)
-        p.drawPixmap(QRect(0, 0, w, h), self.pm); p.end()
+        w = min(self.width(), self.max_width); h = self.heightForWidth(w)
+        p.drawPixmap(QRect((self.width() - w) // 2, 0, w, h), self.pm); p.end()
 
 
 def _big(value, caption) -> QWidget:
@@ -351,16 +352,40 @@ def _big(value, caption) -> QWidget:
     return w
 
 
+def _heading(number: str, text: str) -> QWidget:
+    h = label(f"<span style='color:{theme.ACCENT};'>{number}</span>&nbsp;&nbsp;{text}", "title")
+    h.setStyleSheet("font-size: 20px; padding-top: 20px; padding-bottom: 2px;")
+    return h
+
+
+def _table(headers, rows, bold_row=None, first_width=None, text=False) -> QWidget:
+    """A small table with generous spacing; numbers right-aligned (all left-aligned if text=True)."""
+    w = QWidget(); g = QGridLayout(w); g.setContentsMargins(0, 4, 0, 4)
+    g.setHorizontalSpacing(28); g.setVerticalSpacing(8)
+    for c, h in enumerate(headers if any(headers) else []):
+        g.addWidget(label(f"<b>{h}</b>", "small", wrap=False), 0, c, Qt.AlignLeft if c == 0 or text else Qt.AlignRight)
+    for r, row in enumerate(rows, 1):
+        for c, cell in enumerate(row):
+            txt = f"<b>{cell}</b>" if r - 1 == bold_row else str(cell)
+            g.addWidget(label(txt, "body", wrap=False), r, c, Qt.AlignLeft if c == 0 or text else Qt.AlignRight)
+    g.setColumnStretch(len(headers), 1)
+    if first_width:
+        g.setColumnMinimumWidth(0, first_width)
+    return w
+
+
+def _gap(h=6) -> QWidget:
+    w = QWidget(); w.setFixedHeight(h)
+    return w
+
+
 class CaseStudyPage(QWidget):
-    COLUMNS = (("annual return", "return / year", True), ("annual volatility", "volatility", True),
-               ("Sharpe (rf = 0)", "Sharpe", False), ("max drawdown", "max drawdown", True),
-               ("turnover / rebalance", "turnover", False))
     ROBUST, MARKOWITZ, MINVAR, EQUAL = ("Robust mean-variance (KSS23 dual)", "Markowitz", "Minimum variance",
                                         "Equal weight")
 
     def __init__(self):
         super().__init__()
-        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(12)
+        lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(16)
         path = RESULTS / "results.json"
         if not path.exists():
             lay.addWidget(label("No results yet. Run <b>python scripts/backtest.py</b> in the project folder "
@@ -371,85 +396,124 @@ class CaseStudyPage(QWidget):
         M, S = res["metrics"], res["speed"]
         rob, mk, mv = M[self.ROBUST], M[self.MARKOWITZ], M[self.MINVAR]
         speedup = S["backtest_conic_s"] / S["backtest_dual_s"]
+        pct = lambda v: f"{100 * v:.1f}%"
 
         lay.addWidget(label(
             f"Everything so far used one sample of returns. Here the robust portfolio meets real data: daily prices "
-            f"of {len(res['universe'])} US stocks, {res['period'][0][:4]}–{res['period'][1][:4]} out of sample, "
-            f"through the dot-com crash and 2008. Every month each strategy is re-estimated on the last two years, "
-            f"long-only, paying 0.1% on what it trades. Settings fixed before looking at the results "
+            f"of {len(res['universe'])} US stocks, {res['period'][0][:4]}–{res['period'][1][:4]}, through the dot-com "
+            f"crash and 2008. Every month each strategy is re-estimated on the last two years, long-only, paying 0.1% "
+            f"on what it trades. Settings were fixed before looking at the results "
             f"(γ = {res['gamma']}, ρ = {res['rho']} per day).", "body"))
 
+        # 1 ---------------------------------------------------------------- plain words
+        lay.addWidget(_heading("1", "In plain words"))
+
+        penalty = Card("A penalty for risk")
+        penalty.add(label("To choose a portfolio, give each candidate a score and pick the highest:", "body"))
+        penalty.add(label("<b>score = expected gain − penalty × risk</b>", "lead"))
+        penalty.add(label("Risk is how much the portfolio swings up and down; the penalty is how much you dislike "
+                          "those swings. Two candidates: <b>A</b> gains 10% a year and swings ±20%, <b>B</b> gains "
+                          "7% and swings ±8%.", "body"))
+        penalty.add(_table(["penalty", "score of A", "score of B", "winner"],
+                           [["0 (swings don't matter)", "10", "7", "A"],
+                            ["0.25", "10 − 5 = 5", "7 − 2 = 5", "tie"],
+                            ["0.5", "10 − 10 = 0", "7 − 4 = 3", "B"]], first_width=190))
+        penalty.add(label("A bigger penalty pushes you towards calmer portfolios.", "body"))
+
+        knob = Card("The budget ρ is a knob")
+        knob.add(label("Robustness adds exactly such a penalty. How big it is depends on one number, the budget ρ: "
+                       "think of a volume knob.", "body"))
+        knob.add(_table(["knob", "what you get", "what it believes"],
+                        [["ρ = 0 (all the way down)", "Markowitz", "past average returns are right"],
+                         ["ρ in between", "a mix of the two", "past averages are only roughly right"],
+                         ["ρ large (all the way up)", "minimum variance", "past averages are noise: just avoid swings"]],
+                        first_width=190, text=True))
+        knob.add(label("Minimum variance is the portfolio with the smallest swings, chosen without looking at "
+                       "average returns at all. It is widely used in practice (minimum-volatility funds and "
+                       "indices), because average returns are very hard to estimate.", "body"))
+
+        quality = Card("Is it a better portfolio?")
+        quality.add(label("There is no single 'better': a risk penalty trades some return for a calmer ride. "
+                          "On this data, from Markowitz to the robust portfolio:", "body"))
+        quality.add(_table(["", "Markowitz", "robust"],
+                           [["return per year", pct(mk["annual return"]), pct(rob["annual return"])],
+                            ["swings (volatility)", pct(mk["annual volatility"]), pct(rob["annual volatility"])],
+                            ["worst fall from a peak", pct(mk["max drawdown"]), pct(rob["max drawdown"])],
+                            ["return per unit of risk (Sharpe)", f"{mk['Sharpe (rf = 0)']:.2f}",
+                             f"{rob['Sharpe (rf = 0)']:.2f}"]], first_width=230))
+        quality.add(label("Some return is given up, but more risk is removed: the return per unit of risk is slightly "
+                          "higher. Whether that suits you depends on how much a large fall would hurt you.", "body"))
+        for c in (penalty, knob, quality):
+            lay.addWidget(c)
+
+        # 2 ---------------------------------------------------------------- results
+        lay.addWidget(_heading("2", f"The results, {res['period'][0][:4]}–{res['period'][1][:4]}"))
         head = Card("In three numbers")
-        row = QWidget(); rl = QHBoxLayout(row); rl.setContentsMargins(0, 4, 0, 4); rl.setSpacing(28)
-        rl.addWidget(_big(f"{speedup:.0f}×", f"faster with the Parisi-type dual than with a<br>generic solver, "
-                                             f"same portfolios (weights differ ≤ {S['max_weight_difference']:.0e})"))
-        rl.addWidget(_big(f"{100 * rob['max drawdown']:.0f}%",
-                          f"worst fall from a peak, against {100 * mk['max drawdown']:.0f}% for Markowitz,<br>"
-                          f"but close to minimum variance ({100 * mv['max drawdown']:.0f}%)"))
-        rl.addWidget(_big(f"{rob['Sharpe (rf = 0)']:.2f}",
-                          f"Sharpe ratio, against {mv['Sharpe (rf = 0)']:.2f} (minimum variance)<br>"
-                          f"and {mk['Sharpe (rf = 0)']:.2f} (Markowitz)"))
+        row = QWidget(); rl = QHBoxLayout(row); rl.setContentsMargins(0, 6, 0, 6); rl.setSpacing(40)
+        rl.addWidget(_big(f"{speedup:.0f}×", "faster with the Parisi-type dual than with<br>a generic solver, "
+                                             "same portfolios"))
+        rl.addWidget(_big(pct(rob["max drawdown"]), f"worst fall, against {pct(mk['max drawdown'])} for Markowitz,"
+                                                    f"<br>close to minimum variance ({pct(mv['max drawdown'])})"))
+        rl.addWidget(_big(f"{rob['Sharpe (rf = 0)']:.2f}", f"Sharpe ratio, against {mv['Sharpe (rf = 0)']:.2f} "
+                                                          f"(minimum variance)<br>and {mk['Sharpe (rf = 0)']:.2f} "
+                                                          "(Markowitz)"))
         rl.addStretch(1)
         head.add(row)
-
-        honest = Card("The honest reading")
-        honest.add(label(
-            "With a budget of ρ = 0.05 per day, the adversary can lower every asset's average daily return by about "
-            "√(2ρ) ≈ 0.3 standard deviations, far more than any real daily average. The averages then carry no "
-            "information and the robust portfolio behaves like a <b>minimum-variance</b> portfolio, with a small "
-            "tilt towards return. Its lower risk compared with Markowitz is mostly the lower risk of minimum "
-            "variance. The budget ρ is the dial between the two: the chart below.", "body"))
-
-        speed = Card("Why the dual matters in practice: speed",
-                     "Left: time for one worst case as the data window grows. Right: the same robust backtest "
-                     f"({S['rebalances']} monthly rebalances) computed twice: "
-                     f"{S['backtest_dual_s']:.1f} s with the dual, {S['backtest_conic_s']:.0f} s with CVXPY + Clarabel.")
-        speed.add(Picture(RESULTS / "speed.png"))
-
-        dial = Card("The budget ρ: a dial from Markowitz to minimum variance",
-                    "Left: how much of the robust portfolio is held differently from each benchmark. Right: its "
-                    "return (solid) and volatility (dashed), with Markowitz (orange) and minimum variance (green) "
-                    "as horizontal lines: solid for return, dotted for volatility.")
-        dial.add(Picture(RESULTS / "sensitivity.png"))
-
-        table = Card(f"Results, {res['period'][0][:4]}–{res['period'][1][:4]}")
-        grid = QWidget(); g = QGridLayout(grid); g.setContentsMargins(0, 0, 0, 0); g.setHorizontalSpacing(18)
-        g.addWidget(label("<b>strategy</b>", "small"), 0, 0)
-        for c, (_, title, _) in enumerate(self.COLUMNS, 1):
-            g.addWidget(label(f"<b>{title}</b>", "small", wrap=False), 0, c, Qt.AlignRight)
-        for r, name in enumerate(M, 1):
-            bold = name == self.ROBUST
-            short = name.replace(" (KSS23 dual)", "")
-            g.addWidget(label(f"<b>{short}</b>" if bold else short, "body", wrap=False), r, 0)
-            for c, (key, _, pct) in enumerate(self.COLUMNS, 1):
-                v = M[name][key]
-                txt = f"{100 * v:.1f}%" if pct else f"{v:.2f}"
-                g.addWidget(label(f"<b>{txt}</b>" if bold else txt, "body", wrap=False), r, c, Qt.AlignRight)
-        g.setColumnStretch(0, 1)
-        table.add(grid)
-        for crisis, vals in res["crises"].items():
-            table.add(label(f"<b>{crisis}:</b> " + ", ".join(f"{k.split(' (')[0]} {100 * v:+.0f}%" for k, v in vals.items()),
-                            "small"))
-
-        wealth = Card("Wealth and drawdown", "Log scale.")
-        wealth.add(Picture(RESULTS / "equity.png"))
-
-        practice = Practice("What would I tell a portfolio manager?", rows=[
-            ("Result", "At the default budget the robust portfolio is essentially minimum variance with a small "
-                       f"tilt towards return: similar risk, slightly higher return and Sharpe "
-                       f"({rob['Sharpe (rf = 0)']:.2f} against {mv['Sharpe (rf = 0)']:.2f}), more trading."),
-            ("The dial", "The budget ρ moves it continuously from Markowitz (small ρ) to minimum variance "
-                         "(large ρ). Choosing ρ is choosing how much to trust past average returns."),
-            ("Where the maths helps", "The worst case is an inf over two numbers (q, m) instead of a sup over "
-                                      "504 day-weights: exact, and fast enough to run inside the optimiser."),
-            ("Honest limits", "No clear performance edge over minimum variance; survivorship bias (well-known "
-                              "stocks), zero risk-free rate, one dataset."),
-        ])
         lay.addWidget(head)
-        lay.addWidget(honest)
-        lay.addWidget(speed)
+
+        table = Card("All strategies")
+        cols = (("annual return", "return / year", True), ("annual volatility", "volatility", True),
+                ("Sharpe (rf = 0)", "Sharpe", False), ("max drawdown", "worst fall", True),
+                ("turnover / rebalance", "trading", False))
+        names = list(M)
+        table.add(_table(["strategy"] + [c[1] for c in cols],
+                         [[n.replace(" (KSS23 dual)", "")] + [pct(M[n][k]) if p else f"{M[n][k]:.2f}" for k, _, p in cols]
+                          for n in names], bold_row=names.index(self.ROBUST), first_width=230))
+        table.add(_gap())
+        for crisis, vals in res["crises"].items():
+            table.add(label(f"<b>{crisis}:</b> " + ", ".join(f"{k.split(' (')[0]} {100 * v:+.0f}%"
+                                                             for k, v in vals.items()), "small"))
+        lay.addWidget(table)
+
+        wealth = Card("Wealth and drawdown over time", "Log scale. Below: how far each strategy was from its "
+                                                       "previous peak.")
+        wealth.add(Picture(RESULTS / "equity.png", 860))
+        lay.addWidget(wealth)
+
+        # 3 ---------------------------------------------------------------- the knob, measured
+        lay.addWidget(_heading("3", "Turning the knob on real data"))
+        dial = Card("Where the robust portfolio sits for each budget ρ")
+        dial.add(label("Left: how much of the robust portfolio is held differently from Markowitz (orange) and from "
+                       "minimum variance (green). Right: its return (solid) and volatility (dashed); the horizontal "
+                       "lines are Markowitz (orange) and minimum variance (green).", "body"))
+        dial.add(Picture(RESULTS / "sensitivity.png", 900))
+        dial.add(label("Our default ρ = 0.05 sits near minimum variance. A budget matched to the statistical error of "
+                       "the estimated averages (ρ ≈ 0.001–0.002) stays close to Markowitz; the two are equally far "
+                       "around ρ ≈ 0.01.", "body"))
         lay.addWidget(dial)
-        lay.addWidget(_two_columns(_column(table, practice), _column(wealth)))
+
+        # 4 ---------------------------------------------------------------- speed
+        lay.addWidget(_heading("4", "Where the mathematics pays off: speed"))
+        speed = Card("The Parisi-type dual against a generic solver")
+        speed.add(label("The worst case is an inf over two numbers (q, m) instead of a sup over 504 day-weights. "
+                        f"Left: time for one worst case as the window grows. Right: the same robust backtest "
+                        f"({S['rebalances']} monthly rebalances) computed twice: {S['backtest_dual_s']:.1f} s with the "
+                        f"dual, {S['backtest_conic_s']:.0f} s with CVXPY + Clarabel, same portfolios (weights differ "
+                        f"by at most {S['max_weight_difference']:.0e}).", "body"))
+        speed.add(Picture(RESULTS / "speed.png", 900))
+        lay.addWidget(speed)
+
+        # 5 ---------------------------------------------------------------- honest limits
+        lay.addWidget(_heading("5", "Honest limits"))
+        limits = Card()
+        limits.add(_table(["", ""], [
+            ["<b>Performance</b>", "no clear edge over minimum variance; the risk reduction is mostly what minimum variance gives"],
+            ["<b>Non-linearity</b>", "the mean–variance version performs like the simpler robust mean (EVaR)"],
+            ["<b>Data</b>", "ten well-known US stocks chosen today (survivorship bias), one dataset"],
+            ["<b>Simplifications</b>", "zero risk-free rate, simple trading costs, weights reset daily within the month"],
+        ], first_width=160, text=True))
+        lay.addWidget(limits)
+        lay.addStretch(1)
 
 
 # --------------------------------------------------------------------------- section
