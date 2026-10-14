@@ -54,31 +54,69 @@ def crisis(results, dates, start, end) -> str:
     return "; ".join(rows)
 
 
-def speed_benchmark(R, n=20, seed=1) -> str:
-    """Inner worst case: Parisi-type dual versus a generic conic solver (CVXPY + Clarabel)."""
+def speed_study(dates, R, reps=5, seed=0, rebalances=24) -> str:
+    """Inner worst case: Parisi-type dual versus a generic conic solver (CVXPY + Clarabel, SCS fallback).
+
+    1. Time per worst case as the window grows.  2. A whole robust mean-variance backtest run twice,
+    once with each inner solver: wall-clock time and the largest difference in portfolio weights.
+    """
     try:
-        import cvxpy as cp
+        import cvxpy  # noqa: F401
     except ImportError:
-        return "CVXPY not installed: benchmark skipped (pip install cvxpy)."
+        return "CVXPY not installed: speed study skipped (pip install cvxpy)."
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from tapdual.backtest import ConicWorstCase
+
     rng = np.random.default_rng(seed)
-    t_dual, t_total, t_solve, diff = [], [], [], []
-    for _ in range(n):
-        t0 = rng.integers(0, R.shape[0] - 504)
-        l = -R[t0:t0 + 504] @ rng.dirichlet(np.ones(R.shape[1]))
-        t = time.perf_counter(); a = worst_case_mean_variance(l, GAMMA, TAU, RHO, check_primal=False).objective
-        t_dual.append(time.perf_counter() - t)
-        nu = cp.Variable(l.size, nonneg=True)
-        kl = cp.sum(-cp.entr(nu)) + np.log(l.size)
-        m = nu @ l
-        prob = cp.Problem(cp.Maximize(m + GAMMA * (nu @ l ** 2) - GAMMA * cp.square(m) - TAU * kl),
-                          [cp.sum(nu) == 1, kl <= RHO])
-        t = time.perf_counter(); prob.solve(solver="CLARABEL"); t_total.append(time.perf_counter() - t)
-        t_solve.append(prob.solver_stats.solve_time); diff.append(abs(prob.value - a))
-    return (f"Inner worst case on {n} random (window, portfolio) pairs, 504 days each:\n\n"
-            f"| method | median time | max difference |\n|---|---|---|\n"
-            f"| Parisi-type dual (2 scalars) | {1e3 * np.median(t_dual):.1f} ms | reference |\n"
-            f"| CVXPY + Clarabel, solver only | {1e3 * np.median(t_solve):.1f} ms | {max(diff):.1e} |\n"
-            f"| CVXPY + Clarabel, incl. modelling | {1e3 * np.median(t_total):.1f} ms | |\n")
+    rows, ns, t_dual, t_conic, fails = [], (126, 252, 504, 1008, 2016, 4032), [], [], []
+    for n in ns:
+        conic, td, tc, diff = ConicWorstCase(n, GAMMA, RHO, TAU), [], [], []
+        for _ in range(reps):
+            t0 = rng.integers(0, R.shape[0] - n)
+            l = -R[t0:t0 + n] @ rng.dirichlet(np.ones(R.shape[1]))
+            t = time.perf_counter(); a = worst_case_mean_variance(l, GAMMA, TAU, RHO, check_primal=False).objective
+            td.append(time.perf_counter() - t)
+            t = time.perf_counter(); v, _ = conic(l); tc.append(time.perf_counter() - t); diff.append(abs(v - a))
+        t_dual.append(np.median(td)); t_conic.append(np.median(tc)); fails.append(conic.failures)
+        rows.append(f"| {n} | {1e3 * t_dual[-1]:.1f} ms | {1e3 * t_conic[-1]:.1f} ms | {t_conic[-1] / t_dual[-1]:.0f}x "
+                    f"| {conic.failures} of {reps} | {max(diff):.0e} |")
+
+    D, RR = dates[-504 - 21 * rebalances:], R[-504 - 21 * rebalances:]
+    t = time.time(); a = backtest(Strategy("dual", "robust_mv", gamma=GAMMA, rho=RHO, tau=TAU), D, RR); e_dual = time.time() - t
+    t = time.time(); b = backtest(Strategy("conic", "robust_mv_conic", gamma=GAMMA, rho=RHO, tau=TAU), D, RR)
+    e_conic = time.time() - t
+    wdiff = float(np.abs(a.weights - b.weights).max())
+
+    fig, ax = plt.subplots(1, 2, figsize=(9, 3.4), gridspec_kw={"width_ratios": [1.4, 1]})
+    ax[0].loglog(ns, 1e3 * np.array(t_conic), "o-", color="#8a8983", label="generic conic solver (CVXPY + Clarabel)")
+    ax[0].loglog(ns, 1e3 * np.array(t_dual), "o-", color="#2a78d6", label="Parisi-type dual (2 scalars)")
+    for n, tc, f in zip(ns, t_conic, fails):
+        if f:
+            ax[0].annotate(f"{f} failure{'s' if f > 1 else ''}", (n, 1e3 * tc), textcoords="offset points",
+                           xytext=(-10, 8), fontsize=8, color="#eb6834", ha="right")
+    ax[0].set_xticks(ns); ax[0].set_xticklabels([str(n) for n in ns]); ax[0].minorticks_off()
+    ax[0].set_xlabel("days in the window"); ax[0].set_ylabel("time per worst case (ms)")
+    ax[0].legend(frameon=False, fontsize=8)
+    ax[0].set_title("one worst case", fontsize=10)
+    ax[1].barh([1, 0], [e_conic, e_dual], color=["#8a8983", "#2a78d6"])
+    ax[1].set_yticks([1, 0]); ax[1].set_yticklabels(["conic solver", "dual"])
+    for y, v in ((1, e_conic), (0, e_dual)):
+        ax[1].text(v, y, f"  {v:.1f} s", va="center", fontsize=9)
+    ax[1].set_xlim(0, e_conic * 1.3); ax[1].set_xlabel("seconds")
+    ax[1].set_title(f"whole backtest, {rebalances} rebalances\nsame portfolios (weights differ ≤ {wdiff:.0e})", fontsize=10)
+    for a_ in ax:
+        a_.spines["top"].set_visible(False); a_.spines["right"].set_visible(False)
+    fig.tight_layout(); fig.savefig(OUT / "speed.png", dpi=160); plt.close(fig)
+
+    return ("Time per inner worst case (median of %d random windows and portfolios), and the largest "
+            "difference in value:\n\n| days | dual | conic solver | speed-up | conic failures | max difference |\n"
+            "|---|---|---|---|---|---|\n" % reps + "\n".join(rows) +
+            f"\n\nWhole robust mean-variance backtest over the last {rebalances} monthly rebalances, run twice: "
+            f"**{e_dual:.1f} s with the dual, {e_conic:.1f} s with the conic solver** "
+            f"({e_conic / e_dual:.0f}x), same portfolios (largest weight difference {wdiff:.0e}).\n\n"
+            "![speed](speed.png)\n")
 
 
 def plots(results, sens_rho, sens_gamma):
@@ -149,7 +187,7 @@ def main():
     if sens_rho:
         report += ["## Sensitivity to the KL budget ρ (robust mean-variance)", table(sens_rho),
                    "## Sensitivity to the risk aversion γ", table(sens_gamma), "![sensitivity](sensitivity.png)"]
-    report += ["## Speed of the inner worst case", speed_benchmark(R)]
+    report += ["## Speed: the dual against a generic conic solver", speed_study(dates, R)]
     (OUT / "summary.md").write_text("\n\n".join(report) + "\n")
     print(f"written to {OUT}")
 

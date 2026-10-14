@@ -20,6 +20,19 @@ A walk-forward backtest on real daily prices of 10 US stocks (1990–2018, inclu
 crash and 2008). Every month each strategy is re-estimated on the last two years of returns,
 long-only, with 10 bps transaction costs. All parameters were fixed before looking at results.
 
+**Headline: the Parisi-type dual makes the robust portfolio 60× faster to compute.** The same
+robust mean–variance backtest takes 1.1 s with the dual and 69 s with a generic conic solver
+(CVXPY + Clarabel), and returns the same portfolios (weights differ by at most 10⁻⁴). One worst case
+costs a few milliseconds whatever the window length; the conic solver slows down from 7 ms to 1.4 s
+as the window grows to 16 years, and occasionally fails to converge.
+
+![speed](results/backtest/speed.png)
+
+*Left: time for one worst case (median of 5 random windows and portfolios; "failure" = Clarabel did
+not converge and SCS was used instead). Right: the whole backtest over the last 24 monthly rebalances.*
+
+The investment results:
+
 | strategy | annual return | volatility | Sharpe | max drawdown | turnover |
 |---|---|---|---|---|---|
 | Equal weight | 18.9% | 22.3% | 0.89 | −57.8% | 0.00 |
@@ -43,10 +56,11 @@ Takeaways:
 - **No tuning of risk aversion needed.** Markowitz swings from 29% to 17% volatility as γ goes from 0.02
   to 0.2; the robust portfolio stays at 17–18% for every γ and every budget ρ tried
   ([sensitivity](results/backtest/sensitivity.png)).
-- **The dual is exact and fast.** The worst case from two scalars takes about 2.5 ms, against 24 ms for
-  a standard conic solver (CVXPY + Clarabel) on the same problem, agreeing to 10⁻⁸.
-- **Honest limits.** Here the non-linear (mean–variance) robust portfolio behaves like the linear one
-  (EVaR): its practical edge in this experiment is computational, not performance. The universe has
+- **Exact and fast.** Why the dual is fast: the sup over 504 day-weights becomes an inf over two
+  numbers (q, m), and the portfolio gradient is read off the worst-case weights. It agrees with the
+  conic solver to 10⁻⁸ and, unlike it, has no convergence failures on long windows.
+- **Honest limits.** Here the non-linear (mean–variance) robust portfolio performs like the linear one
+  (EVaR): its edge in this experiment is computational (figure above), not higher returns. The universe has
   survivorship bias (well-known companies chosen today), returns are against a zero risk-free rate,
   and it is one dataset.
 
@@ -55,7 +69,7 @@ Reproduce:
 
 ```bash
 pip install -e ".[backtest]"       # pandas, matplotlib, cvxpy
-python scripts/backtest.py         # about 2 minutes; writes results/backtest/
+python scripts/backtest.py         # about 8 minutes (most of it timing the conic solver); writes results/backtest/
 ```
 
 Data: [`data/`](data/README.md), from PyPortfolioOpt (MIT licence).

@@ -78,11 +78,49 @@ def robust_mean_variance_objective(R, x, gamma, rho, tau):
     return r.objective, -m + 2 * gamma * C @ x
 
 
+class ConicWorstCase:
+    """The same inner worst case solved by a generic conic solver (CVXPY + Clarabel), for comparison.
+
+    Parameterised once per window length (CVXPY's DPP), so repeated solves skip the re-modelling.
+    If Clarabel fails, SCS is tried; `failures` counts Clarabel failures.
+    """
+
+    def __init__(self, n, gamma, rho, tau):
+        import cvxpy as cp
+        self.cp = cp
+        self.l, self.l2 = cp.Parameter(n), cp.Parameter(n)
+        self.nu = cp.Variable(n, nonneg=True)
+        kl = cp.sum(-cp.entr(self.nu)) + np.log(n)
+        m = self.nu @ self.l
+        self.problem = cp.Problem(cp.Maximize(m + gamma * (self.nu @ self.l2) - gamma * cp.square(m) - tau * kl),
+                                  [cp.sum(self.nu) == 1, kl <= rho])
+        self.failures = 0
+
+    def __call__(self, losses):
+        self.l.value, self.l2.value = losses, losses ** 2
+        try:
+            self.problem.solve(solver="CLARABEL")
+            if self.problem.status != "optimal":
+                raise self.cp.error.SolverError(self.problem.status)
+        except self.cp.error.SolverError:
+            self.failures += 1
+            self.problem.solve(solver="SCS", eps_abs=1e-9, eps_rel=1e-9, max_iters=200000)
+        w = np.clip(self.nu.value, 0.0, None)
+        return float(self.problem.value), w / w.sum()
+
+
+def robust_mean_variance_objective_conic(R, x, gamma, rho, tau, solver: ConicWorstCase):
+    value, w = solver(-R @ x)
+    m = w @ R
+    C = (R - m).T @ (w[:, None] * (R - m))
+    return value, -m + 2 * gamma * C @ x
+
+
 # --------------------------------------------------------------------------- strategies
 @dataclass(frozen=True)
 class Strategy:
     name: str
-    kind: str                     # "equal", "markowitz", "robust_mean", "robust_mv"
+    kind: str                     # "equal", "markowitz", "robust_mean", "robust_mv", "robust_mv_conic"
     gamma: float = 0.05
     rho: float = 0.05
     tau: float = 0.1
@@ -98,7 +136,16 @@ class Strategy:
         if self.kind == "robust_mv":
             return _simplex_minimise(lambda x: robust_mean_variance_objective(R, x, self.gamma, self.rho, self.tau),
                                      d, x0)
+        if self.kind == "robust_mv_conic":
+            key = (R.shape[0], self.gamma, self.rho, self.tau)
+            if key not in _CONIC:
+                _CONIC[key] = ConicWorstCase(*key)
+            return _simplex_minimise(lambda x: robust_mean_variance_objective_conic(
+                R, x, self.gamma, self.rho, self.tau, _CONIC[key]), d, x0)
         raise ValueError(self.kind)
+
+
+_CONIC: dict = {}
 
 
 # --------------------------------------------------------------------------- backtest

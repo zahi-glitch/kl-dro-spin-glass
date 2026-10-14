@@ -44,13 +44,20 @@ Out-of-sample period 1991-12-31 to 2018-04-11. Window 504 days, monthly rebalanc
 
 ![sensitivity](sensitivity.png)
 
-## Speed of the inner worst case
+## Speed: the dual against a generic conic solver
 
-Inner worst case on 20 random (window, portfolio) pairs, 504 days each:
+Time per inner worst case (median of 5 random windows and portfolios), and the largest difference in value:
 
-| method | median time | max difference |
-|---|---|---|
-| Parisi-type dual (2 scalars) | 2.4 ms | reference |
-| CVXPY + Clarabel, solver only | 24.0 ms | 1.6e-08 |
-| CVXPY + Clarabel, incl. modelling | 35.9 ms | |
+| days | dual | conic solver | speed-up | conic failures | max difference |
+|---|---|---|---|---|---|
+| 126 | 1.7 ms | 6.7 ms | 4x | 0 of 5 | 2e-08 |
+| 252 | 1.8 ms | 15.9 ms | 9x | 0 of 5 | 4e-08 |
+| 504 | 2.2 ms | 32.0 ms | 15x | 0 of 5 | 1e-08 |
+| 1008 | 3.4 ms | 40.9 ms | 12x | 0 of 5 | 1e-08 |
+| 2016 | 5.7 ms | 185.4 ms | 33x | 1 of 5 | 1e-08 |
+| 4032 | 7.5 ms | 1445.8 ms | 194x | 1 of 5 | 1e-08 |
+
+Whole robust mean-variance backtest over the last 24 monthly rebalances, run twice: **1.1 s with the dual, 68.9 s with the conic solver** (60x), same portfolios (largest weight difference 1e-04).
+
+![speed](speed.png)
 
