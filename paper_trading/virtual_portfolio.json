@@ -1,0 +1,16 @@
+{
+  "start": "2026-10-14",
+  "capital": 10000.0,
+  "tickers": [
+    "SPY",
+    "EFA",
+    "EEM",
+    "VNQ",
+    "TLT",
+    "IEF",
+    "LQD",
+    "GLD",
+    "DBC"
+  ],
+  "created": "2026-10-15"
+}
