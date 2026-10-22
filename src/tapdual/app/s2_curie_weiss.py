@@ -1,0 +1,168 @@
+"""Section 2: order. The Curie–Weiss model, its free-energy landscape and hysteresis."""
+from __future__ import annotations
+
+import numpy as np
+import pyqtgraph as pg
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import (QHBoxLayout, QPushButton, QWidget)
+
+from .. import spinglass as sg
+from . import theme
+from .common import Section, _column, _two_columns
+from .references import reading_card
+from .widgets import Card, Deeper, LabeledSlider, Practice, SpinGrid, label
+
+
+class CurieWeissSection(Section):
+    FPS, UPDATES, HISTORY = 30, 64, 300
+
+    def __init__(self):
+        super().__init__(
+            "2", "Order: the Curie–Weiss model",
+            story=("A statistical-mechanics system is many ±1 parts, an energy that scores configurations, and noise "
+                   "(temperature). We predict probabilities and a few summary numbers.",
+                   "The simplest possible rule: every spin wants to agree with every other spin, equally.",
+                   "Can a crowd make up its mind on its own, with nobody in charge?"),
+            lead="The simplest collective behaviour. Every [[spin]] σ<sub>i</sub> = ±1 feels the average of all the others, "
+            "so the only thing that matters is the [[magnetisation]] m = (1/N) Σ<sub>i</sub> σ<sub>i</sub>. The answer is "
+            "<b>yes</b>: below a critical temperature the crowd picks a side on its own, a "
+            "[[phase-transition|phase transition]]. Its [[free-energy|free energy]] is a supremum over one number, m.")
+        self.rng = np.random.default_rng()
+        self.s = self.rng.choice([-1.0, 1.0], sg.N_SPINS)
+        self.hist_t, self.hist_m, self.t = [], [], 0.0
+        self.sweep_dir, self.loop_h, self.loop_m = 0, [], []
+        self.ms = np.linspace(-0.999, 0.999, 801)
+
+        self.grid = SpinGrid(cell=14)
+        self.m_label = label("", "small")
+        sim = Card("256 spins, all coupled to all", "Black = +1, light = −1. Energy H(σ) = −(N/2) m² − h Σ<sub>i</sub> σ<sub>i</sub>, simulated by "
+                   "[[glauber|Glauber dynamics]] at the chosen β and field h.")
+        sim.add(self.grid, 1); sim.add(self.m_label)
+
+        self.plot_l = pg.PlotWidget(); theme.style_plot(self.plot_l.getPlotItem(), "magnetisation m", "φ(m)")
+        self.plot_l.setFixedHeight(240); self.plot_l.setXRange(-1, 1)
+        self.curve_l = self.plot_l.plot(pen=pg.mkPen(theme.ACCENT, width=2.5))
+        self.max_pts = pg.ScatterPlotItem(size=11, brush=theme.ACCENT, pen=pg.mkPen("white", width=2))
+        self.plot_l.addItem(self.max_pts)
+        self.now_line = pg.InfiniteLine(angle=90, pen=pg.mkPen(theme.ACCENT_2, width=1.5))
+        self.plot_l.addItem(self.now_line)
+        landscape = Card("The free-energy landscape",
+                         f"φ(m) = βm²/2 + βhm − I(m): energy gain minus the cost I(m) of the rare event "
+                         f"'the average is m' (I is a [[large-deviations|large-deviation rate]]). "
+                         f"The free energy is log 2 + max φ. <span style='color:{theme.ACCENT_2}'>│</span> where the "
+                         "simulation is now.")
+        landscape.add(self.plot_l)
+        landscape.add(Deeper(
+            "Group the 2<sup>N</sup> configurations by their magnetisation. About 2<sup>N</sup>e<sup>−N I(m)</sup> of them have "
+            "average m (Cramér's theorem, see [[large-deviations|large deviations]]), each with Gibbs weight "
+            "e<sup>Nβm²/2 + Nβhm</sup>. A sum of terms e<sup>N·(something)</sup> is dominated, on the log scale, by its "
+            "largest term (the <i>Laplace principle</i>), so (1/N) log Z → log 2 + sup<sub>m</sub> φ(m). The maximiser solves m = tanh(β(m + h)). "
+            "For h = 0 the maximum moves away from 0 when β &gt; 1. It is a <b>supremum</b> because the energy "
+            "−Nm²/2 is a convex function of m: see [[legendre|Legendre duality]]. Open the [[curie-weiss]] entry "
+            "for the formulas."))
+
+        self.beta = LabeledSlider("Inverse temperature β = 1/T", 0.0, 2.5, 1.4, 250, hint="β = 1 is the critical point (at h = 0).")
+        self.h = LabeledSlider("External field h", -0.3, 0.3, 0.0, 120, fmt=lambda v: f"{v:+.3f}",
+                               hint="A common push in one direction.")
+        buttons = QWidget(); bl = QHBoxLayout(buttons); bl.setContentsMargins(0, 4, 0, 0)
+        self.run_btn = QPushButton("Run  ▶"); self.run_btn.setObjectName("primary")
+        self.rand_btn = QPushButton("Random start")
+        bl.addWidget(self.run_btn); bl.addWidget(self.rand_btn); bl.addStretch(1)
+        controls = Card("Controls"); controls.add(self.beta); controls.add(self.h); controls.add(buttons)
+
+        self.plot_h = pg.PlotWidget(); theme.style_plot(self.plot_h.getPlotItem(), "incentive h", "share adopting, m")
+        self.plot_h.setFixedHeight(200); self.plot_h.setXRange(-0.3, 0.3); self.plot_h.setYRange(-1.05, 1.05)
+        self.loop_curve = self.plot_h.plot(pen=pg.mkPen(theme.ACCENT, width=2))
+        self.sweep_btn = QPushButton("Sweep the incentive  ↔")
+        self.loop_text = label("", "body")
+        practice = Practice("Why do markets tip, and why don't they tip back?", rows=[
+            ("Model", "N people choose σ<sub>i</sub> = +1 (adopt a product) or −1 (not). Each one's incentive is "
+                      "h (price, private taste) plus the average choice m of the others (peer effect); β measures how "
+                      "strongly people respond. This is the discrete-choice model with social interactions of "
+                      "Brock and Durlauf (2001)."),
+            ("Equilibrium", "m = tanh(β(m + h)): the same equation as the magnet."),
+            ("Try it", "Press <b>Sweep</b>: h rises from −0.3 to +0.3 and falls back, starting with nobody adopting."),
+            ("What you see", "β &lt; 1: adoption follows the price smoothly. β &gt; 1: it <b>jumps</b> up at one price "
+                             "and jumps back only at a much lower one (hysteresis). Two markets with the same price can "
+                             "sit in opposite states: history matters."),
+        ])
+        practice.add(self.sweep_btn); practice.add(self.plot_h); practice.add(self.loop_text)
+
+        self.lay.addWidget(_two_columns(_column(sim, landscape), _column(controls, practice)))
+        self.lay.addWidget(reading_card("curie-weiss"))
+        self.lay.addStretch(1)
+        self.timer = QTimer(self); self.timer.setInterval(1000 // self.FPS); self.timer.timeout.connect(self.tick)
+        self.run_btn.clicked.connect(self.toggle)
+        self.rand_btn.clicked.connect(self.random_start)
+        self.sweep_btn.clicked.connect(self.start_sweep)
+        self.beta.changed.connect(lambda _: self.refresh_landscape())
+        self.h.changed.connect(lambda _: self.refresh_landscape())
+        self.refresh_landscape(); self.refresh_sim()
+
+    def toggle(self):
+        if self.timer.isActive():
+            self.timer.stop(); self.run_btn.setText("Run  ▶")
+        else:
+            self.timer.start(); self.run_btn.setText("Pause  ❚❚")
+
+    def random_start(self):
+        self.s = self.rng.choice([-1.0, 1.0], sg.N_SPINS); self.refresh_sim()
+
+    def start_sweep(self):
+        self.s = -np.ones(sg.N_SPINS)                      # nobody adopts
+        self.h.set_value(-0.3)
+        self.loop_h, self.loop_m, self.sweep_dir = [], [], +1
+        if not self.timer.isActive():
+            self.toggle()
+
+    def tick(self):
+        if self.sweep_dir:
+            h = self.h.value() + self.sweep_dir * 0.004
+            if h >= 0.3:
+                self.sweep_dir = -1
+            elif h <= -0.3 and self.sweep_dir == -1:
+                self.sweep_dir = 0
+            self.h.set_value(float(np.clip(h, -0.3, 0.3)))
+        sg.cw_sweep(self.s, self.beta.value(), self.h.value(), self.rng, self.UPDATES * 4 if self.sweep_dir else self.UPDATES)
+        self.t += self.UPDATES / sg.N_SPINS
+        if self.sweep_dir or self.loop_h:
+            self.loop_h.append(self.h.value()); self.loop_m.append(float(self.s.mean()))
+            self.loop_curve.setData(self.loop_h, self.loop_m)
+            if not self.sweep_dir:
+                self.describe_loop()
+        self.refresh_sim()
+
+    def describe_loop(self):
+        h, m = np.array(self.loop_h), np.array(self.loop_m)
+        up = h[: int(np.argmax(h)) + 1]; mu = m[: int(np.argmax(h)) + 1]
+        down = h[int(np.argmax(h)):]; md = m[int(np.argmax(h)):]
+        try:
+            h_up = up[np.argmax(mu > 0)]; h_down = down[np.argmax(md < 0)]
+            self.loop_text.setText(f"Adoption switched on at h ≈ {h_up:+.2f} and off only at h ≈ {h_down:+.2f}."
+                                   if h_up - h_down > 0.03 else
+                                   "No hysteresis at this β: adoption follows the price smoothly. Try β above 1.")
+        except ValueError:
+            pass
+        self.loop_h, self.loop_m = [], []
+
+    def refresh_landscape(self):
+        b, h = self.beta.value(), self.h.value()
+        phi = sg.cw_landscape(self.ms, b, h)
+        self.curve_l.setData(self.ms, phi)
+        roots = sg.cw_stationary(b, h)
+        vals = [float(sg.cw_landscape(r, b, h)) for r in roots]
+        best = max(vals)
+        pts = [(r, v) for r, v in zip(roots, vals) if abs(v - best) < 1e-9 or
+               (len(roots) == 3 and r != roots[1])]       # global and local maxima, not the middle minimum
+        self.max_pts.setData([p[0] for p in pts], [p[1] for p in pts])
+        self.plot_l.setYRange(float(phi.min()) - 0.02, best + 0.05)
+
+    def refresh_sim(self):
+        m = float(self.s.mean())
+        self.grid.set_state(self.s)
+        self.now_line.setPos(m)
+        self.m_label.setText(f"magnetisation m = {m:+.2f}   ·   β = {self.beta.value():.2f}, h = {self.h.value():+.3f}")
+
+    def hideEvent(self, e):
+        self.timer.stop(); self.run_btn.setText("Run  ▶"); super().hideEvent(e)
+
