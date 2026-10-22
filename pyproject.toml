@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tapdual"
+version = "0.1.0"
+description = "From statistical mechanics to robust optimisation: the Parisi-type dual of a KL-constrained sup, an educational app and a portfolio case study"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.22", "scipy>=1.8", "pandas>=1.5"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+app = ["PySide6>=6.6", "pyqtgraph>=0.13", "matplotlib>=3.5"]
+backtest = ["matplotlib>=3.5", "cvxpy>=1.4"]
+live = ["yfinance>=0.2"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tapdual = ["data/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
