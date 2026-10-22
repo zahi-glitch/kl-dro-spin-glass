@@ -46,8 +46,9 @@ class LivePage(QWidget):
         self.chart_card = Card("Value day by day")
         self.plot = pg.PlotWidget(axisItems={"bottom": pg.DateAxisItem(orientation="bottom")})
         theme.style_plot(self.plot.getPlotItem(), "", "value ($)")
-        self.plot.setFixedHeight(300); self.plot.addLegend(offset=(10, 10))
-        self.chart_card.add(self.plot)
+        self.plot.setFixedHeight(300)
+        self.legend = label("", "small"); self.legend.setWordWrap(True)
+        self.chart_card.add(self.legend); self.chart_card.add(self.plot)
         self.chart_note = label("", "small"); self.chart_card.add(self.chart_note)
 
         self.today_card = Card("Today's portfolios",
@@ -142,6 +143,11 @@ class LivePage(QWidget):
         xs = [datetime.combine(d, dtime(16)).timestamp() for d in v.dates]
         colors = {"Equal weight": theme.INK_3, "Markowitz": theme.ACCENT_2, "Minimum variance": "#1D9E75",
                   self.live.ROBUST: theme.ACCENT}
+        keys = []
+        for n in names:
+            mark = "┈┈" if "60/40" in n else "╍╍" if n.startswith("Benchmark") else "━━"
+            keys.append(f"<span style='color:{colors.get(n, theme.INK)}'>{mark}</span>&nbsp;{n}")
+        self.legend.setText(" &nbsp;&nbsp;&nbsp; ".join(keys))
         for n in names:
             bench = n.startswith("Benchmark")
             pen = pg.mkPen(colors.get(n, theme.INK), width=2.5 if n == self.live.ROBUST else 1.6,
@@ -150,12 +156,11 @@ class LivePage(QWidget):
                 pen.setStyle(Qt.DotLine)
             self.plot.plot(xs, v.values[n], pen=pen,
                            symbol="o" if len(xs) < 40 and not bench else None, symbolSize=5,
-                           symbolBrush=colors.get(n, theme.INK),
-                           name=n)
+                           symbolBrush=colors.get(n, theme.INK))
         self.plot.addItem(pg.InfiniteLine(pos=v.capital, angle=0, pen=pg.mkPen(theme.BORDER, style=Qt.DashLine)))
-        self.chart_note.setText("Dashed line: the $10,000 invested. The first point is the start: each strategy is "
+        self.chart_note.setText("Grey dashed line: the $10,000 invested. The first point is the start: each strategy is "
                                 "at $9,990 after paying 0.1% to buy." if days < 2 else
-                                "Dashed line: the $10,000 invested.")
+                                "Grey dashed line: the $10,000 invested.")
         strategies = [s.name for s in self.live.STRATEGIES]
         rows = [[f"{tk} &nbsp;<span style='color:{theme.INK_3};'>{self.live.UNIVERSE.get(tk, '')}</span>"]
                 + [f"{100 * today.weights[n][i]:.1f}%" for n in strategies] for i, tk in enumerate(today.tickers)]
