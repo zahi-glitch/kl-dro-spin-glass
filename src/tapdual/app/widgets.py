@@ -31,10 +31,9 @@ def label(text: str, kind: str = "body", wrap: bool = True) -> QLabel:
     lab.setObjectName(kind)
     lab.setWordWrap(wrap)
     lab.setTextFormat(Qt.RichText)
-    if "gloss:" in lab.text():
-        lab.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
-        lab.linkActivated.connect(_on_link)
-        lab.setCursor(Qt.ArrowCursor)
+    # All text can be selected and copied (Cmd+C); glossary links still open on click.
+    lab.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse)
+    lab.linkActivated.connect(_on_link)
     return lab
 
 
