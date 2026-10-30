@@ -1,14 +1,14 @@
 # Virtual $10,000
 
-Invested at the close of 2026-10-14; latest prices 2026-10-28 (10 trading days, 0 monthly rebalances). Educational, no real money.
+Invested at the close of 2026-10-14; latest prices 2026-10-29 (11 trading days, 0 monthly rebalances). Educational, no real money.
 
 | strategy | worth now | gain ($) | gain (%) |
 |---|---|---|---|
-| Equal weight | $10,074.22 | +74.22 | +0.74% |
-| Markowitz | $10,037.03 | +37.03 | +0.37% |
-| Minimum variance | $10,114.70 | +114.70 | +1.15% |
-| Robust mean-variance | $10,112.37 | +112.37 | +1.12% |
-| Benchmark: US stocks (SPY) | $10,025.18 | +25.18 | +0.25% |
-| Benchmark: 60/40 stocks/bonds | $10,061.89 | +61.89 | +0.62% |
+| Equal weight | $10,085.66 | +85.66 | +0.86% |
+| Markowitz | $9,979.76 | -20.24 | -0.20% |
+| Minimum variance | $10,146.67 | +146.67 | +1.47% |
+| Robust mean-variance | $10,138.97 | +138.97 | +1.39% |
+| Benchmark: US stocks (SPY) | $9,986.88 | -13.12 | -0.13% |
+| Benchmark: 60/40 stocks/bonds | $10,056.73 | +56.73 | +0.57% |
 
 Day-by-day values: `virtual_values.csv`. Updated automatically on weekdays.
