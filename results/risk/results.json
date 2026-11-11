@@ -1,0 +1,250 @@
+{
+  "rho": 0.007682917641388248,
+  "window": 250,
+  "report": {
+    "historical": {
+      "VaR 99%": {
+        "average level (%)": 3.2341777378546106,
+        "exceptions": 94.0,
+        "expected": 68.75000000000006,
+        "Kupiec p": 0.0037448243797788758,
+        "Christoffersen p (cc)": 0.0005926857578172412,
+        "P(exc | exc yesterday)": 0.05319148936170213,
+        "windows green": 0.8047087232115907,
+        "windows red": 0.03727739209175973,
+        "Acerbi-Szekely Z2": NaN
+      },
+      "robust VaR 99%": {
+        "average level (%)": 4.537525005087523,
+        "exceptions": 27.0,
+        "expected": 68.75000000000006,
+        "Kupiec p": 7.959330898187981e-09,
+        "Christoffersen p (cc)": 1.4891151180844237e-08,
+        "P(exc | exc yesterday)": 0.037037037037037035,
+        "windows green": 1.0,
+        "windows red": 0.0,
+        "Acerbi-Szekely Z2": NaN
+      },
+      "VaR 97.5%": {
+        "average level (%)": 2.4929231623459787,
+        "exceptions": 215.0,
+        "expected": 171.87500000000014,
+        "Kupiec p": 0.001335803122528636,
+        "Christoffersen p (cc)": 1.3719022699154852e-07,
+        "P(exc | exc yesterday)": 0.09767441860465116,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": NaN
+      },
+      "robust VaR 97.5%": {
+        "average level (%)": 3.2341777378546106,
+        "exceptions": 94.0,
+        "expected": 171.87500000000014,
+        "Kupiec p": 4.9461586986293884e-11,
+        "Christoffersen p (cc)": 1.649034691802474e-11,
+        "P(exc | exc yesterday)": 0.05319148936170213,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": NaN
+      },
+      "ES 97.5%": {
+        "average level (%)": 3.2652899607790307,
+        "exceptions": NaN,
+        "expected": NaN,
+        "Kupiec p": NaN,
+        "Christoffersen p (cc)": NaN,
+        "P(exc | exc yesterday)": NaN,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": 0.2902125755235785
+      },
+      "robust ES 97.5%": {
+        "average level (%)": 4.05547965074829,
+        "exceptions": NaN,
+        "expected": NaN,
+        "Kupiec p": NaN,
+        "Christoffersen p (cc)": NaN,
+        "P(exc | exc yesterday)": NaN,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": -0.42830680610294247
+      },
+      "EVaR 97.5%": {
+        "average level (%)": 3.8835767089664563,
+        "exceptions": 48.0,
+        "expected": NaN,
+        "Kupiec p": NaN,
+        "Christoffersen p (cc)": NaN,
+        "P(exc | exc yesterday)": NaN,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": NaN
+      }
+    },
+    "filtered": {
+      "VaR 99%": {
+        "average level (%)": 3.3825317056714863,
+        "exceptions": 90.0,
+        "expected": 68.75000000000006,
+        "Kupiec p": 0.013935133094692713,
+        "Christoffersen p (cc)": 0.017546973933349207,
+        "P(exc | exc yesterday)": 0.03333333333333333,
+        "windows green": 0.8130093570781769,
+        "windows red": 0.0,
+        "Acerbi-Szekely Z2": NaN
+      },
+      "robust VaR 99%": {
+        "average level (%)": 4.759705360127278,
+        "exceptions": 25.0,
+        "expected": 68.75000000000006,
+        "Kupiec p": 1.0658234283230196e-09,
+        "Christoffersen p (cc)": 7.627223525009337e-09,
+        "P(exc | exc yesterday)": 0.0,
+        "windows green": 1.0,
+        "windows red": 0.0,
+        "Acerbi-Szekely Z2": NaN
+      },
+      "VaR 97.5%": {
+        "average level (%)": 2.577511425731037,
+        "exceptions": 188.0,
+        "expected": 171.87500000000014,
+        "Kupiec p": 0.21968445464937517,
+        "Christoffersen p (cc)": 0.13310444219297435,
+        "P(exc | exc yesterday)": 0.047872340425531915,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": NaN
+      },
+      "robust VaR 97.5%": {
+        "average level (%)": 3.3825317056714863,
+        "exceptions": 90.0,
+        "expected": 171.87500000000014,
+        "Kupiec p": 3.669464731094407e-12,
+        "Christoffersen p (cc)": 1.1757775986782767e-11,
+        "P(exc | exc yesterday)": 0.03333333333333333,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": NaN
+      },
+      "ES 97.5%": {
+        "average level (%)": 3.4124376358506074,
+        "exceptions": NaN,
+        "expected": NaN,
+        "Kupiec p": NaN,
+        "Christoffersen p (cc)": NaN,
+        "P(exc | exc yesterday)": NaN,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": 0.12299050262475308
+      },
+      "robust ES 97.5%": {
+        "average level (%)": 4.281307890267425,
+        "exceptions": NaN,
+        "expected": NaN,
+        "Kupiec p": NaN,
+        "Christoffersen p (cc)": NaN,
+        "P(exc | exc yesterday)": NaN,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": -0.4643389749844844
+      },
+      "EVaR 97.5%": {
+        "average level (%)": 4.098941276001039,
+        "exceptions": 48.0,
+        "expected": NaN,
+        "Kupiec p": NaN,
+        "Christoffersen p (cc)": NaN,
+        "P(exc | exc yesterday)": NaN,
+        "windows green": NaN,
+        "windows red": NaN,
+        "Acerbi-Szekely Z2": NaN
+      }
+    }
+  },
+  "sweep": {
+    "historical 0": {
+      "exceptions": 94,
+      "expected": 68.75,
+      "rate": 0.013672727272727272,
+      "LR_uc": 8.403581742859728,
+      "p_uc": 0.0037448243797788758
+    },
+    "historical 0.1": {
+      "exceptions": 59,
+      "expected": 68.75,
+      "rate": 0.008581818181818182,
+      "LR_uc": 1.467123746041807,
+      "p_uc": 0.22580005062734532
+    },
+    "historical 0.25": {
+      "exceptions": 59,
+      "expected": 68.75,
+      "rate": 0.008581818181818182,
+      "LR_uc": 1.467123746041807,
+      "p_uc": 0.22580005062734532
+    },
+    "historical 0.5": {
+      "exceptions": 27,
+      "expected": 68.75,
+      "rate": 0.003927272727272727,
+      "LR_uc": 33.28502228836294,
+      "p_uc": 7.959330898187981e-09
+    },
+    "historical 1": {
+      "exceptions": 27,
+      "expected": 68.75,
+      "rate": 0.003927272727272727,
+      "LR_uc": 33.28502228836294,
+      "p_uc": 7.959330898187981e-09
+    },
+    "historical 2": {
+      "exceptions": 27,
+      "expected": 68.75,
+      "rate": 0.003927272727272727,
+      "LR_uc": 33.28502228836294,
+      "p_uc": 7.959330898187981e-09
+    },
+    "filtered 0": {
+      "exceptions": 90,
+      "expected": 68.75,
+      "rate": 0.01309090909090909,
+      "LR_uc": 6.046342506120141,
+      "p_uc": 0.013935133094692713
+    },
+    "filtered 0.1": {
+      "exceptions": 57,
+      "expected": 68.75,
+      "rate": 0.00829090909090909,
+      "LR_uc": 2.153769568871553,
+      "p_uc": 0.14222033374040063
+    },
+    "filtered 0.25": {
+      "exceptions": 57,
+      "expected": 68.75,
+      "rate": 0.00829090909090909,
+      "LR_uc": 2.153769568871553,
+      "p_uc": 0.14222033374040063
+    },
+    "filtered 0.5": {
+      "exceptions": 25,
+      "expected": 68.75,
+      "rate": 0.0036363636363636364,
+      "LR_uc": 37.20057509358088,
+      "p_uc": 1.0658234283230196e-09
+    },
+    "filtered 1": {
+      "exceptions": 25,
+      "expected": 68.75,
+      "rate": 0.0036363636363636364,
+      "LR_uc": 37.20057509358088,
+      "p_uc": 1.0658234283230196e-09
+    },
+    "filtered 2": {
+      "exceptions": 25,
+      "expected": 68.75,
+      "rate": 0.0036363636363636364,
+      "LR_uc": 37.20057509358088,
+      "p_uc": 1.0658234283230196e-09
+    }
+  }
+}

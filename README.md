@@ -19,8 +19,9 @@ the inf over two numbers (q, m) of the Parisi-type formula.
 | Python package | both sides of the duality, checked against each other; the robust portfolio; spin-glass simulations | `src/tapdual/` |
 | Desktop app | an educational tour in five sections, with live simulations and a glossary with formulas | `python -m tapdual.app` |
 | Case study | KL-robust portfolios on real US stock prices, 1990–2018, with an honest reading | below, `results/backtest/` |
+| Risk measurement | daily VaR, Expected Shortfall and EVaR with a model-risk (KL-robust) version, backtested | below, `results/risk/` |
 | Live tracking | a virtual $10,000 followed every weekday by a GitHub robot, with a weekly report | `paper_trading/`, Issues |
-| Tests | about 90 automated checks: duality, simulations, backtest, app | `tests/` |
+| Tests | about 100 automated checks: duality, simulations, backtest, risk, app | `tests/` |
 
 ## Quick start
 
@@ -92,6 +93,42 @@ Full tables, crises and sensitivities: [`results/backtest/summary.md`](results/b
 Reproduce with `pip install -e ".[backtest]"` and `python scripts/backtest.py` (about 10 minutes).
 Data: [PyPortfolioOpt test prices](src/tapdual/data/README.md), MIT licence.
 
+## Risk measurement with model risk
+
+The same KL ball measures risk. The worst-case mean over a ball of radius log(1/(1−α)) is the **entropic
+value-at-risk** (EVaR), an upper bound on Expected Shortfall; and the worst VaR or ES over a small ball around
+the data is a **model-risk** version of the standard measures (as in Glasserman and Xu, *Robust risk
+measurement and model risk*, Quantitative Finance 2014). Both are computed exactly: robust VaR by a Bernoulli
+equation, robust ES by a minimax swap and the same one-dimensional dual (`src/tapdual/risk.py`).
+
+Daily forecasts for the equal-weight portfolio, 1990–2018, each from the previous 250 days, backtested
+with the tests risk teams use (Kupiec, Christoffersen, Basel traffic light, Acerbi–Székely for ES):
+
+| VaR 99% method | exceptions (target 69) | in 2008 | clustering | ES 97.5%: Z2 (0 = right) |
+|---|---|---|---|---|
+| historical simulation | 94 | 16 | rejected | 0.29 |
+| historical + robust (KL) | 27 | 4 | rejected | −0.43 |
+| filtered by EWMA volatility | 90 | 4 | borderline (p = 0.02) | 0.12 |
+| filtered + robust (KL) | 25 | 1 | rejected | −0.46 |
+
+![crisis](results/risk/crisis.png)
+
+How to read it:
+
+- **Historical simulation underestimates risk and reacts late**: a staircase that lagged the 2008 crash,
+  with 16 exceptions that year instead of about 2.5.
+- **Volatility filtering fixes the timing** (16 → 4 exceptions in 2008, no 250-day window in the Basel red
+  zone), not the level.
+- **The KL-robust adjustment fixes the level, and shows how little one year of data says about the tail.**
+  With 250 days, VaR 99% is the third-worst day of the year; at a 95% confidence radius the model-risk bound
+  is the worst day, which is too conservative (27 exceptions). A tenth of that radius (the second-worst day)
+  gives the right rate (57–59 exceptions, Kupiec test passed).
+- **Limit**: no distribution in the ball can put weight beyond the worst loss in the window; historical
+  methods cannot imagine a crash worse than the ones they have seen.
+
+Full tables and the sensitivity in ρ: [`results/risk/summary.md`](results/risk/summary.md). Reproduce with
+`python scripts/risk_report.py` (about 2 minutes).
+
 ## Live tracking
 
 A virtual $10,000 was invested at the close of 14 October 2026 in each strategy and in two benchmarks
@@ -107,11 +144,12 @@ advice.
 src/tapdual/            model, gibbs, dual, primal   the duality (sup and Parisi-type inf)
                         dro.py                       KL-robust worst cases on data
                         backtest.py, live.py         case study, live tracking
+                        risk.py                      VaR, ES, EVaR, model-risk versions, backtests
                         spinglass.py                 Curie–Weiss, Hopfield, SK, REM simulations
                         app/                         the desktop app, one file per section (s1_ ... s5_)
                         data/                        stock prices (PyPortfolioOpt, MIT)
-scripts/                backtest.py, track.py
-results/backtest/       case-study tables and figures
+scripts/                backtest.py, risk_report.py, track.py
+results/                case study (backtest/) and risk report (risk/)
 paper_trading/          the robot's records
 tests/
 ```
