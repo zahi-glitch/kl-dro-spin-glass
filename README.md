@@ -138,6 +138,27 @@ A virtual $10,000 was invested at the close of 14 October 2026 in each strategy 
 `paper_trading/log.csv`. A weekly report is posted as an Issue. Educational, no real money, not investment
 advice.
 
+**What the first weeks show.** Like minimum variance, the robust portfolio holds about three quarters in
+one fund of medium-term US government bonds (IEF). In the stock sell-off of 5 November it did not move
+while US stocks lost 4.4%; in the week to 13 November it lost 1.7% while stocks gained 2.6%, because bond
+prices fell as interest rates rose. Low *volatility* is not low *risk*: the portfolio is a concentrated bet
+on interest rates. The rules stay fixed during the live run (changing them after a bad week is what the
+tracking is meant to prevent); possible improvements are listed below.
+
+## Next steps
+
+- **Cap each fund** (for example at 40%) so that low volatility cannot turn into a bet on a single asset.
+- **Measure concentration, not only volatility**: report the risk contribution of each fund and the
+  sensitivity to interest rates alongside the return statistics.
+- **Broaden the safe assets**: inflation-linked bonds (TIP) or short-term Treasuries, so that "safe" does
+  not mean "exposed to rising rates".
+- **Choose ρ by validation** instead of fixing it: ρ is how much to distrust past returns, and the backtest
+  shows it moves the portfolio from Markowitz to minimum variance.
+- **Risk-aware live report**: add the daily VaR, ES and model-risk bounds of `risk.py` to the virtual
+  portfolio, with the exceptions counted as the run goes on.
+- **Machine-learning return forecasts** as inputs, with the robust portfolio deciding how much to trust
+  them: developed in a separate capstone project.
+
 ## Repository layout
 
 ```
